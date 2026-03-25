@@ -305,6 +305,12 @@ def main() -> None:
     parser.add_argument("--is-audio", action="store_true", help="Process files as audio instead of video")
     parser.add_argument("--log-file", help="Path to log file (default: <output_dir>/pipeline.log)")
     parser.add_argument(
+        "--decimal-places",
+        type=int,
+        default=3,
+        help="Round float values in CSV output to this many decimal places (default: 3)",
+    )
+    parser.add_argument(
         "--check-dependencies",
         action="store_true",
         help="Check if all required dependencies are installed",
@@ -358,7 +364,7 @@ def main() -> None:
         sys.exit(1)
 
     try:
-        pipeline = MultimodalPipeline(output_dir=output_dir, features=features, device="cpu")
+        pipeline = MultimodalPipeline(output_dir=output_dir, features=features, device="cpu", decimal_places=args.decimal_places)
 
         try:
             import torch  # type: ignore[import]

@@ -23,6 +23,18 @@ python run_pipeline.py --check-dependencies
 
 The `run_macos.sh` wrapper handles `conda run` activation; it calls `run_pipeline.py` with all passed arguments.
 
+## Known Issues
+
+### VFR (Variable Frame Rate) videos
+Videos with variable frame rates cause MediaPipe to fail with:
+```
+Input timestamp must be monotonically increasing
+```
+Pre-process with ffmpeg to convert to constant frame rate before running the pipeline:
+```bash
+ffmpeg -i input.MP4 -vsync cfr -r 25 output.MP4
+```
+
 ## Environment
 
 - **Conda env:** `pipeline-env`, Python 3.11

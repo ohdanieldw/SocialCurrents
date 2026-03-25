@@ -26,6 +26,7 @@ class MultimodalPipeline:
         features: List[str] = None,
         device: str = "cpu",
         keep_per_frame: bool = False,
+        decimal_places: int = 3,
     ):
         """
         Initialize the multimodal pipeline.
@@ -38,6 +39,7 @@ class MultimodalPipeline:
         """
         self.device = device
         self.keep_per_frame = bool(keep_per_frame)
+        self.decimal_places = int(decimal_places)
 
         # Set up output directory
         if output_dir is None:
@@ -980,6 +982,7 @@ class MultimodalPipeline:
 
             if csv_rows:
                 df = pd.DataFrame(csv_rows).set_index("filename")
+                df = df.round(self.decimal_places)
                 csv_path = self.output_dir / "pipeline_features.csv"
                 df.to_csv(csv_path)
                 print(f"CSV saved to {csv_path}  ({len(df)} rows × {len(df.columns)} columns)")
@@ -998,6 +1001,7 @@ class MultimodalPipeline:
 
             if ts_parts:
                 ts_df = pd.concat(ts_parts, ignore_index=True)
+                ts_df = ts_df.round(self.decimal_places)
                 ts_path = self.output_dir / "pipeline_features_timeseries.csv"
                 ts_df.to_csv(ts_path, index=False)
                 print(
@@ -1031,10 +1035,16 @@ class MultimodalPipeline:
         """
         row: Dict[str, Any] = {}
 
+        _SKIP_CSV = self._PER_FRAME_KEYS | {"per_frame", "GMP_SM_pic", "video_path"}
+
         for key, value in features.items():
             if callable(value):
                 continue
-            if key in self._PER_FRAME_KEYS:
+            if key in _SKIP_CSV:
+                continue
+            if key == "error" or key.endswith("_error"):
+                if value:
+                    logging.warning("Extractor error in features[%s]: %s", key, value)
                 continue
 
             # ── numpy scalar ────────────────────────────────────────────────
@@ -1146,8 +1156,14 @@ class MultimodalPipeline:
         if isinstance(mp_pf, list) and mp_pf:
             mp_fidx = np.array([d.get("frame_idx", i) for i, d in enumerate(mp_pf)], dtype=float)
             gmp_keys = [k for k in mp_pf[0] if k.startswith("GMP_")]
+            def _sf(v, default=0.0):
+                try:
+                    return float(v)
+                except (TypeError, ValueError):
+                    return default
+
             for k in gmp_keys:
-                vals = np.array([float(d.get(k, 0.0)) for d in mp_pf])
+                vals = np.array([_sf(d.get(k, 0.0)) for d in mp_pf])
                 if len(mp_fidx) == n_frames:
                     df[k] = vals
                 elif len(mp_fidx) >= 2:
@@ -1181,6 +1197,7 @@ class MultimodalPipeline:
         # ── Scalar features (broadcast) ──────────────────────────────────────
         SKIP = self._PER_FRAME_KEYS | {
             "video_fps", "video_total_frames", "hop_length", "sample_rate", "num_frames",
+            "per_frame", "GMP_SM_pic", "video_path",
         }
         existing_cols = set(df.columns)
         for key, val in features.items():
