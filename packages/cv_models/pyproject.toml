@@ -1,0 +1,33 @@
+[tool.poetry]
+name = "cv-models"
+version = "0.1.0"
+description = "Computer vision dependency bundle for pose and facial analysis modules."
+authors = ["Multimodal Pipeline Maintainers <ml-pipeline@example.com>"]
+packages = [{ include = "cv_models" }]
+readme = "README.md"
+license = "MIT"
+
+[tool.poetry.dependencies]
+python = ">=3.10,<3.14"
+numpy = "^1.26"
+soundfile = "^0.12"
+opencv-python = ">=4.9.0,<4.10.0"
+torch = ">=2.2,<3.0"
+torchvision = ">=0.17,<1.0"
+mediapipe = "^0.10.7"
+scipy = ">=1.11,<1.13"
+matplotlib = "^3.8"
+pillow = "^10.2"
+scikit-image = "^0.22"
+tqdm = "^4.66"
+py-feat = "^0.5.0"
+moviepy = "^1.0.3"
+pyfacer = { git = "https://github.com/FacePerceiver/facer.git", rev = "ddd35c76ff840174b8a5403ad1c1255e37b8782b" }
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^8.1"
+ruff = "^0.4.4"
+
+[build-system]
+requires = ["poetry-core>=1.8.0"]
+build-backend = "poetry.core.masonry.api"

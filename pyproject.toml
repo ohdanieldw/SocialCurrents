@@ -1,0 +1,34 @@
+[tool.poetry]
+name = "multimodal-data-pipeline"
+version = "0.1.0"
+description = "Orchestrator project for the multimodal feature extraction pipeline."
+authors = ["Multimodal Pipeline Maintainers <ml-pipeline@example.com>"]
+readme = "README.md"
+license = "MIT"
+
+[tool.poetry.dependencies]
+python = ">=3.10,<3.14"
+numpy = "^1.26"
+pandas = "^2.2"
+scikit-learn = "^1.4.2"
+tqdm = "^4.66"
+ffmpeg-python = "^0.2.0"
+soundfile = "^0.12.1"
+transformers = { version = "^4.44.2", extras = ["torch"] }
+pyarrow = "^14.0"
+core-pipeline = { path = "packages/core_pipeline", develop = true }
+audio-models = { path = "packages/audio_models", develop = true }
+cv-models = { path = "packages/cv_models", develop = true }
+nlp-models = { path = "packages/nlp_models", develop = true }
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^8.1"
+ruff = "^0.4.4"
+pre-commit = "^3.7"
+
+[tool.poetry.scripts]
+run-pipeline = "run_pipeline:main"
+
+[build-system]
+requires = ["poetry-core>=1.8.0"]
+build-backend = "poetry.core.masonry.api"

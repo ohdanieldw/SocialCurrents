@@ -1,0 +1,21 @@
+[tool.poetry]
+name = "core-pipeline"
+version = "0.1.0"
+description = "Core orchestrator and runtime for the multimodal feature extraction pipeline."
+authors = ["Multimodal Pipeline Maintainers <ml-pipeline@example.com>"]
+packages = [{ include = "core_pipeline" }]
+readme = "README.md"
+license = "MIT"
+
+[tool.poetry.dependencies]
+python = ">=3.10,<3.14"
+numpy = "^1.26"
+pandas = "^2.2"
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^8.1"
+ruff = "^0.4.4"
+
+[build-system]
+requires = ["poetry-core>=1.8.0"]
+build-backend = "poetry.core.masonry.api"

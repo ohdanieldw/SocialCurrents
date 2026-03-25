@@ -1,0 +1,37 @@
+[tool.poetry]
+name = "audio-models"
+version = "0.1.0"
+description = "Isolated dependency set for audio and speech feature extractors."
+authors = ["Multimodal Pipeline Maintainers <ml-pipeline@example.com>"]
+packages = [{ include = "audio_models" }]
+readme = "README.md"
+license = "MIT"
+
+[tool.poetry.dependencies]
+python = ">=3.10,<3.14"
+numpy = "^1.26"
+opencv-python = ">=4.9.0,<4.10.0"
+librosa = "^0.10.1"
+opensmile = "^2.5.0"
+audiostretchy = "^1.3.5"
+torch = ">=2.2,<3.0"
+torchaudio = ">=2.2,<3.0"
+soundfile = "^0.12.1"
+scipy = ">=1.11,<1.13"
+scikit-learn = "^1.4.2"
+transformers = "^4.44.2"
+sentencepiece = "^0.2.0"
+speechbrain = { version = "^1.0.0", optional = true }
+whisperx = { version = ">=3.0.0", optional = true }
+
+[tool.poetry.extras]
+speech = ["speechbrain", "whisperx"]
+all = ["speechbrain", "whisperx"]
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^8.1"
+ruff = "^0.4.4"
+
+[build-system]
+requires = ["poetry-core>=1.8.0"]
+build-backend = "poetry.core.masonry.api"

@@ -1,0 +1,62 @@
+# Virtual environments
+vision310_main/
+*/venv/
+*/.venv/
+*/env/
+*.egg-info/
+
+# External cloned repos (fetched on demand at runtime)
+external/
+openpose/
+
+# Data files
+data/
+
+# Pipeline output directories
+out_*/
+output_*/
+test outputs/
+
+# Model weights and binaries
+*.task
+*.pt
+*.pth
+*.ckpt
+*.bin
+*.safetensors
+*.onnx
+*.pb
+
+# Python artifacts
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+*.egg-info/
+
+# Jupyter
+*.ipynb_checkpoints/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Lock files
+poetry.lock
+
+# Claude Code session memory
+.claude/
+
+# Internal dev files
+lab instructions.py
+old README.md
+checklist.md
+
+# Media files
+*.mp4
+*.MP4
+*.avi
+*.mov
+*.mkv
+*.wav
+*.flac
