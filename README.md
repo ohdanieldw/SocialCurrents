@@ -140,7 +140,7 @@ See [CHANGELOG.md](CHANGELOG.md) for version history.
 
 If you use SocialCurrents in published research, please cite:
 
-> Oh, D. D., Dao, K., Duan, S., Yu, R., & Shi, Y. (2026). *SocialCurrents: A multimodal feature extraction pipeline for social and behavioral research* (Version 0.1.0) [Software]. GitHub. https://github.com/ohdanieldw/socialcurrents
+> Oh, D. D. (2026). *SocialCurrents: A multimodal feature extraction pipeline for social and behavioral research* (Version 0.1.0) [Software]. GitHub. https://github.com/ohdanieldw/socialcurrents
 
 ## License
 
