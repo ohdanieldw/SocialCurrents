@@ -62,6 +62,16 @@ FEATURE_CATALOG = [
         "description": "WhisperX diarized transcription outputs (WhX_*)."
     },
     {
+        "name": "xlsr_speech_to_text",
+        "category": "Audio Transcript",
+        "description": "XLSR (wav2vec2) multilingual speech-to-text with hidden states."
+    },
+    {
+        "name": "s2t_speech_to_text",
+        "category": "Audio Transcript",
+        "description": "Facebook Speech2Text transcription with alignment and confidence."
+    },
+    {
         "name": "deberta_text",
         "category": "Text Analysis",
         "description": "DeBERTa benchmark summaries (DEB_*)."
@@ -85,6 +95,11 @@ FEATURE_CATALOG = [
         "name": "use_text",
         "category": "Text Analysis",
         "description": "Universal Sentence Encoder embeddings (USE_*)."
+    },
+    {
+        "name": "elmo_text",
+        "category": "Text Analysis",
+        "description": "ELMo deep contextualized word embeddings."
     },
     {
         "name": "pare_vision",
@@ -185,7 +200,27 @@ FEATURE_CATALOG = [
         "name": "smoothnet_vision",
         "category": "Body Pose",
         "description": "SmoothNet temporally smoothed pose series (net_*)."
-    }
+    },
+    {
+        "name": "avhubert_vision",
+        "category": "Audio-Visual",
+        "description": "AV-HuBERT audio-visual speech embeddings."
+    },
+    {
+        "name": "fact_vision",
+        "category": "Video Understanding",
+        "description": "FACT frame-action cross-attention temporal features."
+    },
+    {
+        "name": "video_frames_vision",
+        "category": "Video Understanding",
+        "description": "Key frame extraction with optional LLM-powered frame analysis."
+    },
+    {
+        "name": "rife_vision",
+        "category": "Video Understanding",
+        "description": "RIFE optical flow magnitude and angle per frame pair."
+    },
 ]
 
 ALL_FEATURES: _ListType[str] = [entry["name"] for entry in FEATURE_CATALOG]

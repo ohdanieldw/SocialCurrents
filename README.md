@@ -93,11 +93,14 @@ bash run_macos.sh -d data/ -o output/
 | `audiostretchy` | Audio | `AS_` |
 | `speech_emotion` | Speech | `ser_` |
 | `whisperx_transcription` | Speech/ASR | `WhX_` |
+| `xlsr_speech_to_text` | Speech/ASR | — |
+| `s2t_speech_to_text` | Speech/ASR | — |
 | `deberta_text` | NLP | `DEB_` |
 | `simcse_text` | NLP | `CSE_` |
 | `albert_text` | NLP | `alb_` |
 | `sbert_text` | NLP | `BERT_` |
 | `use_text` | NLP | `USE_` |
+| `elmo_text` | NLP | — |
 | `mediapipe_pose_vision` | Pose | `GMP_` |
 | `vitpose_vision` | Pose | `vit_` |
 | `pyfeat_vision` | Facial | `pf_` |
@@ -120,6 +123,10 @@ bash run_macos.sh -d data/ -o output/
 | `me_graphau_vision` | Facial | `ann_` |
 | `heinsen_sentiment` | NLP | `arvs_` |
 | `meld_emotion` | NLP | `MELD_` |
+| `avhubert_vision` | Audio-Visual | — |
+| `fact_vision` | Video | — |
+| `video_frames_vision` | Video | — |
+| `rife_vision` | Video | — |
 
 Run `bash run_macos.sh --list-features` for descriptions of each extractor.
 
