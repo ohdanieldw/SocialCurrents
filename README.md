@@ -129,7 +129,7 @@ See [MANUAL.md](MANUAL.md) for the full feature reference, output format details
 
 If you use SocialCurrents in published research, please cite:
 
-> Oh, D. D. (2026). *SocialCurrents: A multimodal feature extraction pipeline for social and behavioral research* [Software]. GitHub. https://github.com/ohdanieldw/socialcurrents
+> Oh, D. D., Dao, K., Duan, S., & Yu, R. (2026). *SocialCurrents: A multimodal feature extraction pipeline for social and behavioral research* [Software]. GitHub. https://github.com/ohdanieldw/socialcurrents
 
 ## License
 
