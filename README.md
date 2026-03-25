@@ -105,9 +105,21 @@ bash run_macos.sh -d data/ -o output/
 | `arbex_vision` | Facial | `arbex_` |
 | `crowdflow_vision` | Video | `of_` |
 | `instadm_vision` | Video | `indm_` |
-| *(+ 15 more)* | | |
+| `optical_flow_vision` | Video | — |
+| `videofinder_vision` | Video | `ViF_` |
+| `lanegcn_vision` | Video | `GCN_` |
+| `openpose_vision` | Pose | `openPose_` |
+| `pare_vision` | Pose | `PARE_` |
+| `psa_vision` | Pose | `psa_` |
+| `deep_hrnet_vision` | Pose | `DHiR_` |
+| `simple_baselines_vision` | Pose | `SBH_` |
+| `rsn_vision` | Pose | `rsn_` |
+| `smoothnet_vision` | Pose | `net_` |
+| `me_graphau_vision` | Facial | `ann_` |
+| `heinsen_sentiment` | NLP | `arvs_` |
+| `meld_emotion` | NLP | `MELD_` |
 
-Run `bash run_macos.sh --list-features` for the full list with descriptions.
+Run `bash run_macos.sh --list-features` for descriptions of each extractor.
 
 ## Documentation
 
