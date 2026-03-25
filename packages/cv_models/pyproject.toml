@@ -2,7 +2,7 @@
 name = "cv-models"
 version = "0.1.0"
 description = "Computer vision dependency bundle for pose and facial analysis modules."
-authors = ["Multimodal Pipeline Maintainers <ml-pipeline@example.com>"]
+authors = ["Multimodal Pipeline Maintainer(s) <ohdanieldw@gmail.com>"]
 packages = [{ include = "cv_models" }]
 readme = "README.md"
 license = "MIT"
