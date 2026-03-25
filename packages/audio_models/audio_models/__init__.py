@@ -1,5 +1,7 @@
 """Audio models and utilities for the multimodal pipeline."""
 
+__version__ = "0.1.0"
+
 from .audio import (
     AudioFeatureExtractor,
     LibrosaFeatureExtractor,

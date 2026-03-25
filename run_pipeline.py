@@ -274,6 +274,7 @@ def main() -> None:
         action="store_true",
         help="Check if all required dependencies are installed",
     )
+    parser.add_argument("--version", action="version", version="SocialCurrents 0.1.0")
     args = parser.parse_args()
 
     if args.list_features:

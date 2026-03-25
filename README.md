@@ -1,5 +1,7 @@
 # SocialCurrents
 
+![Version](https://img.shields.io/badge/version-0.1.0-blue)
+
 SocialCurrents is a multimodal feature extraction pipeline for social and behavioral research. Given a folder of video recordings (e.g., dyadic interactions, interviews, group conversations), it produces time-stamped, analysis-ready feature files covering body movement, facial expression, speech, and language — with no manual annotation required.
 
 ## What it measures
