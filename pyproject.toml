@@ -2,7 +2,7 @@
 name = "multimodal-data-pipeline"
 version = "0.1.0"
 description = "Orchestrator project for the multimodal feature extraction pipeline."
-authors = ["Multimodal Pipeline Maintainers <ml-pipeline@example.com>"]
+authors = ["Multimodal Pipeline Maintainer(s) <ohdanieldw@gmail.com>"]
 readme = "README.md"
 license = "MIT"
 
