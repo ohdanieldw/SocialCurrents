@@ -2,7 +2,7 @@
 name = "core-pipeline"
 version = "0.1.0"
 description = "Core orchestrator and runtime for the multimodal feature extraction pipeline."
-authors = ["Multimodal Pipeline Maintainers <ml-pipeline@example.com>"]
+authors = ["Multimodal Pipeline Maintainer(s) <ohdanieldw@gmail.com>"]
 packages = [{ include = "core_pipeline" }]
 readme = "README.md"
 license = "MIT"
