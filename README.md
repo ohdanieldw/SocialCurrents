@@ -134,6 +134,8 @@ Run `bash run_macos.sh --list-features` for descriptions of each extractor.
 
 See [MANUAL.md](MANUAL.md) for the full feature reference, output format details, and per-feature temporality notes (which features are time-varying vs. summary scalars).
 
+See [CHANGELOG.md](CHANGELOG.md) for version history.
+
 ## Citation
 
 If you use SocialCurrents in published research, please cite:
