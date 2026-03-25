@@ -48,7 +48,6 @@ class MultimodalPipeline:
             self.output_dir = Path(output_dir)
 
         os.makedirs(self.output_dir, exist_ok=True)
-        os.makedirs(self.output_dir / "audio", exist_ok=True)
 
         # Initialize feature list
         all_features = [
@@ -493,13 +492,14 @@ class MultimodalPipeline:
         if "speech_separation" in self.features:
             print(f"Extracting speech separation features from {audio_path}")
             extractor = self._get_extractor("speech_separation")
-            sep_out_dir = self.output_dir / "audio" / "separated"
-            os.makedirs(sep_out_dir, exist_ok=True)
             if extractor is not None:
-                separation_features = extractor.get_feature_dict(audio_path, sep_out_dir)
-                features.update(separation_features)
+                try:
+                    separation_features = extractor.get_feature_dict(audio_path, None)
+                    features.update(separation_features)
+                except Exception as e:
+                    logging.warning("speech_separation failed, skipping: %s", e)
             else:
-                print("Warning: Skipping speech_separation (extractor unavailable)")
+                logging.warning("Skipping speech_separation (extractor unavailable)")
 
         # Extract WhisperX features
         if "whisperx_transcription" in self.features:
