@@ -122,4 +122,4 @@ If you use SocialCurrents in published research, please cite:
 ## License
 
 MIT — see [LICENSE](LICENSE).
-Copyright © 2026 DongWon Daniel Oh
+Copyright © 2026 Daniel DongWon Oh
