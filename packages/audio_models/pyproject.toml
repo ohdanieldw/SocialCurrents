@@ -2,7 +2,7 @@
 name = "audio-models"
 version = "0.1.0"
 description = "Isolated dependency set for audio and speech feature extractors."
-authors = ["Multimodal Pipeline Maintainer(s) <ohdanieldw@gmail.com>"]
+authors = ["Daniel DongWon Oh <ohdanieldw@gmail.com>"]
 packages = [{ include = "audio_models" }]
 readme = "README.md"
 license = "MIT"
