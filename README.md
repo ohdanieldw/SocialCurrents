@@ -4,6 +4,10 @@
 
 SocialCurrents is a multimodal feature extraction pipeline for social and behavioral research. Given a folder of video recordings (e.g., dyadic interactions, interviews, group conversations), it produces time-stamped, analysis-ready feature files covering body movement, facial expression, speech, and language — with no manual annotation required.
 
+See [MANUAL.md](MANUAL.md) for the full feature reference, output format details, and per-feature temporality notes (which features are time-varying vs. summary scalars).
+
+See [CHANGELOG.md](CHANGELOG.md) for version history.
+
 ## What it measures
 
 | Modality | What you get |
@@ -164,12 +168,6 @@ bash run_macos.sh -i data/ -o output/
 | `rife_vision` | Video | — |
 
 Run `bash run_macos.sh --list-features` for descriptions of each extractor.
-
-## Documentation
-
-See [MANUAL.md](MANUAL.md) for the full feature reference, output format details, and per-feature temporality notes (which features are time-varying vs. summary scalars).
-
-See [CHANGELOG.md](CHANGELOG.md) for version history.
 
 ## Citation
 
