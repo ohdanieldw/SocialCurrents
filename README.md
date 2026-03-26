@@ -4,6 +4,8 @@
 
 SocialCurrents is a multimodal feature extraction pipeline for social and behavioral research. Given a folder of video recordings (e.g., dyadic interactions, interviews, group conversations), it produces time-stamped, analysis-ready feature files covering body movement, facial expression, speech, and language — with no manual annotation required.
 
+## Documentation
+
 See [MANUAL.md](MANUAL.md) for the full feature reference, output format details, and per-feature temporality notes (which features are time-varying vs. summary scalars).
 
 See [CHANGELOG.md](CHANGELOG.md) for version history.
