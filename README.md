@@ -71,12 +71,17 @@ Setup takes 5–15 minutes on first run. It creates a conda environment called `
 # Run on a folder of video files
 bash run_macos.sh -d data/ -o output/
 
+# Skip CPU-prohibitive extractors (recommended on CPU-only machines)
+bash run_macos.sh -d data/ -o output/ --skip-slow
+
 # Run only specific feature extractors (faster)
 bash run_macos.sh -d data/ -o output/ -f basic_audio,mediapipe_pose_vision,pyfeat_vision
 
-# See all 35 available extractors
+# See all available extractors
 bash run_macos.sh --list-features
 ```
+
+`--skip-slow` excludes three extractors that are prohibitively slow on CPU: `s2t_speech_to_text`, `xlsr_speech_to_text`, and `elmo_text`. When `-f` is used instead, `--skip-slow` has no effect — all explicitly requested extractors run regardless.
 
 For WhisperX speaker diarization, export your HuggingFace token first:
 

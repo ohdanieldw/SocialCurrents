@@ -228,6 +228,9 @@ FEATURE_DESCRIPTIONS: _DictType[str, str] = {
     entry["name"]: entry["description"] for entry in FEATURE_CATALOG
 }
 
+# Extractors excluded by --skip-slow (CPU-prohibitive; only run when explicitly requested via -f)
+SLOW_FEATURES: _ListType[str] = ["s2t_speech_to_text", "xlsr_speech_to_text", "elmo_text"]
+
 # Ensure in-repo packages are importable when running as a script
 PROJECT_ROOT = Path(__file__).resolve().parent
 PACKAGES_DIR = PROJECT_ROOT / "packages"
@@ -302,6 +305,11 @@ def main() -> None:
         help="Comma-separated features to extract (default: all features defined in the catalog)",
     )
     parser.add_argument("--list-features", action="store_true", help="List available features and exit")
+    parser.add_argument(
+        "--skip-slow",
+        action="store_true",
+        help=f"Skip CPU-prohibitive extractors ({', '.join(SLOW_FEATURES)}); has no effect when -f is used",
+    )
     parser.add_argument("--is-audio", action="store_true", help="Process files as audio instead of video")
     parser.add_argument("--log-file", help="Optional path for a run-level log file (per-subject logs are written automatically to each subject's output folder)")
     parser.add_argument(
@@ -340,6 +348,9 @@ def main() -> None:
             features = ALL_FEATURES
     else:
         features = ALL_FEATURES
+        if args.skip_slow:
+            features = [f for f in features if f not in SLOW_FEATURES]
+            logging.info("--skip-slow: excluding %s", ", ".join(SLOW_FEATURES))
 
     if args.output_dir:
         output_dir = Path(args.output_dir)
