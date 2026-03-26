@@ -21,7 +21,7 @@ See [CHANGELOG.md](CHANGELOG.md) for version history.
 
 ## Input filename convention
 
-Name your video files using the pattern `{dyadID}_{subjectID}.extension`:
+Name your video files using the pattern `{dyadID}_{subjectID}.extension`, e.g.:
 
 ```
 dyad002_sub003.MP4
@@ -33,7 +33,7 @@ The pipeline splits on the first underscore to extract the dyad and subject IDs.
 
 ## Output files
 
-Each subject gets its own subfolder nested under their dyad:
+Each subject gets its own subfolder nested under their dyad, e.g.:
 
 ```
 output/
