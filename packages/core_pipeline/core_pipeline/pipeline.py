@@ -1218,6 +1218,8 @@ class MultimodalPipeline:
                 continue
             if isinstance(val, (np.ndarray, list)):
                 continue  # arrays already handled above
+            if key.startswith("osm_"):
+                continue  # osm_ arrays are already in new_cols; scalar keys are file-level functionals
             if isinstance(val, (np.number, np.bool_)):
                 scalar = val.item()
             elif isinstance(val, (int, float, bool, str)):
@@ -1230,6 +1232,7 @@ class MultimodalPipeline:
 
         if new_cols:
             df = pd.concat([df, pd.DataFrame(new_cols, index=df.index)], axis=1)
+        df = df.replace(-100.0, np.nan)
         return df
 
     def _group_features_by_model(self, features: Dict[str, Any]) -> Dict[str, Any]:
