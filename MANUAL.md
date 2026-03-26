@@ -35,11 +35,11 @@ Inputs can be **video files** (`.mp4`, `.avi`, `.mov`, `.mkv`) or **audio files*
 
 Input files should be named using the convention `{dyadID}_{subjectID}.extension` (e.g., `dyad002_sub003.MP4`). The pipeline splits on the first underscore to route outputs to `output/{dyadID}/{subjectID}/`. If a filename has no underscore, a single folder named after the file stem is used as a fallback.
 
-Outputs per subject:
-- **`features_timeseries.csv`** — one row per video frame; time-varying features (audio waveform statistics, pose landmarks, facial expressions) change row-by-row while scalar features are broadcast to every row
-- **`features.csv`** — one row per input file; array-valued features are summarised as `_mean/_std/_min/_max` columns
-- **`features.json`** — nested JSON grouped by model, with full arrays and metadata
-- **`{subjectID}.log`** — processing log for this subject (e.g., `sub003.log`)
+Outputs per subject (files are prefixed with `{dyadID}_{subjectID}`, e.g. `dyad002_sub003`):
+- **`{prefix}_timeseries_features.csv`** — one row per video frame; time-varying features (audio waveform statistics, pose landmarks, facial expressions) change row-by-row while scalar features are broadcast to every row
+- **`{prefix}_summary_features.csv`** — one row per input file; array-valued features are summarised as `_mean/_std/_min/_max` columns
+- **`{prefix}_summary_features.json`** — nested JSON grouped by model, with full arrays and metadata
+- **`{prefix}.log`** — processing log for this subject (e.g., `dyad002_sub003.log`)
 
 ---
 
@@ -177,14 +177,14 @@ After processing, the output directory contains:
 
 ```
 output/
-  dyad002/                        ← one folder per dyad
-    sub003/                       ← one folder per subject
-      features_timeseries.csv     ← time-indexed CSV (one row per video frame)
-      features.csv                ← summary CSV (one row per file, arrays → stats columns)
-      features.json               ← nested JSON with model groupings and full arrays
-      sub003.log                  ← processing log for this subject
+  dyad002/                                        ← one folder per dyad
+    sub003/                                       ← one folder per subject
+      dyad002_sub003_timeseries_features.csv      ← time-indexed CSV (one row per video frame)
+      dyad002_sub003_summary_features.csv         ← summary CSV (one row per file, arrays → stats columns)
+      dyad002_sub003_summary_features.json        ← nested JSON with model groupings and full arrays
+      dyad002_sub003.log                          ← processing log for this subject
     sub007/
-      features_timeseries.csv
+      dyad002_sub007_timeseries_features.csv
       ...
   dyad015/
     sub042/
@@ -195,13 +195,12 @@ Files named without an underscore (no dyadID) are written directly to `output/<s
 
 ---
 
-### Time-series CSV (`features_timeseries.csv`)
+### Time-series CSV (`{prefix}_timeseries_features.csv`)
 
 The primary analysis output. Each row represents one video frame. Columns:
 
 | Column | Description |
 |---|---|
-| `filename` | Source video filename |
 | `frame_idx` | 0-based frame index |
 | `time_seconds` | Timestamp in seconds (`frame_idx / fps`) |
 | `oc_audvol`, `oc_audpit`, … | Audio arrays linearly interpolated from audio frame rate to video frame rate |
@@ -221,7 +220,7 @@ The primary analysis output. Each row represents one video frame. Columns:
 ```python
 import pandas as pd
 
-ts = pd.read_csv("output/sub007/features_timeseries.csv")
+ts = pd.read_csv("output/dyad002/sub003/dyad002_sub003_timeseries_features.csv")
 
 # Pose visibility for left wrist landmark over time
 ts.plot(x="time_seconds", y="GMP_land_visi_16")
@@ -235,13 +234,13 @@ ts.plot(x="time_seconds", y="oc_audvol")
 
 ---
 
-### Summary CSV (`features.csv`)
+### Summary CSV (`{prefix}_summary_features.csv`)
 
 One row per input file. Array-valued features are summarised into statistics columns. Useful for file-level comparisons.
 
 ```python
 import pandas as pd
-df = pd.read_csv("output/sub007/features.csv", index_col="filename")
+df = pd.read_csv("output/dyad002/sub003/dyad002_sub003_summary_features.csv")
 df["oc_audvol_mean"]      # mean volume across the recording
 df["pf_happiness"]        # mean Py-Feat happiness (already a scalar in this file)
 df["GMP_land_visi_26"]    # mean visibility of landmark 26 across all frames
@@ -259,7 +258,7 @@ df["GMP_land_visi_26"]    # mean visibility of landmark 26 across all frames
 
 ---
 
-### JSON (`features.json`)
+### JSON (`{prefix}_summary_features.json`)
 
 Nested structure grouped by model. Large arrays (>1000 elements) are stored as statistics objects:
 
