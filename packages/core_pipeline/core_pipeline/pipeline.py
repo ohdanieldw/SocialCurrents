@@ -434,60 +434,78 @@ class MultimodalPipeline:
             print(f"Extracting basic audio features from {audio_path}")
             extractor = self._get_extractor("basic_audio")
             if extractor is not None:
-                basic_features = extractor.extract_all_features(audio_path)
-                features.update(basic_features)
+                try:
+                    basic_features = extractor.extract_all_features(audio_path)
+                    features.update(basic_features)
+                except Exception as e:
+                    logging.warning("basic_audio failed, skipping: %s", e)
             else:
-                print("Warning: Skipping basic_audio (extractor unavailable)")
+                logging.warning("Skipping basic_audio (extractor unavailable)")
 
         # Extract librosa spectral features
         if "librosa_spectral" in self.features:
             print(f"Extracting librosa spectral features from {audio_path}")
             extractor = self._get_extractor("librosa_spectral")
             if extractor is not None:
-                spectral_features = extractor.extract_all_features(audio_path)
-                features.update(spectral_features)
+                try:
+                    spectral_features = extractor.extract_all_features(audio_path)
+                    features.update(spectral_features)
+                except Exception as e:
+                    logging.warning("librosa_spectral failed, skipping: %s", e)
             else:
-                print("Warning: Skipping librosa_spectral (extractor unavailable)")
+                logging.warning("Skipping librosa_spectral (extractor unavailable)")
 
         # Extract OpenSMILE features
         if "opensmile" in self.features:
             print(f"Extracting OpenSMILE features from {audio_path}")
             extractor = self._get_extractor("opensmile")
             if extractor is not None:
-                opensmile_features = extractor.get_feature_dict(audio_path)
-                features.update(opensmile_features)
+                try:
+                    opensmile_features = extractor.get_feature_dict(audio_path)
+                    features.update(opensmile_features)
+                except Exception as e:
+                    logging.warning("opensmile failed, skipping: %s", e)
             else:
-                print("Warning: Skipping opensmile (extractor unavailable)")
+                logging.warning("Skipping opensmile (extractor unavailable)")
 
         # Extract AudioStretchy features
         if "audiostretchy" in self.features:
             print(f"Extracting AudioStretchy time-stretching features from {audio_path}")
             extractor = self._get_extractor("audiostretchy")
             if extractor is not None:
-                audiostretchy_features = extractor.get_feature_dict(audio_path)
-                features.update(audiostretchy_features)
+                try:
+                    audiostretchy_features = extractor.get_feature_dict(audio_path)
+                    features.update(audiostretchy_features)
+                except Exception as e:
+                    logging.warning("audiostretchy failed, skipping: %s", e)
             else:
-                print("Warning: Skipping audiostretchy (extractor unavailable)")
+                logging.warning("Skipping audiostretchy (extractor unavailable)")
 
         # Extract speech emotion features
         if "speech_emotion" in self.features:
             print(f"Extracting speech emotion features from {audio_path}")
             extractor = self._get_extractor("speech_emotion")
             if extractor is not None:
-                emotion_features = extractor.predict(audio_path)
-                features.update(emotion_features)
+                try:
+                    emotion_features = extractor.predict(audio_path)
+                    features.update(emotion_features)
+                except Exception as e:
+                    logging.warning("speech_emotion failed, skipping: %s", e)
             else:
-                print("Warning: Skipping speech_emotion (extractor unavailable)")
+                logging.warning("Skipping speech_emotion (extractor unavailable)")
 
         # Extract Heinsen routing sentiment features
         if "heinsen_sentiment" in self.features:
             print(f"Extracting Heinsen routing sentiment features from {audio_path}")
             extractor = self._get_extractor("heinsen_sentiment")
             if extractor is not None:
-                sentiment_features = extractor.get_feature_dict(features)
-                features.update(sentiment_features)
+                try:
+                    sentiment_features = extractor.get_feature_dict(features)
+                    features.update(sentiment_features)
+                except Exception as e:
+                    logging.warning("heinsen_sentiment failed, skipping: %s", e)
             else:
-                print("Warning: Skipping heinsen_sentiment (extractor unavailable)")
+                logging.warning("Skipping heinsen_sentiment (extractor unavailable)")
 
         # Extract speech separation features
         if "speech_separation" in self.features:
@@ -507,11 +525,13 @@ class MultimodalPipeline:
             print(f"Extracting WhisperX transcription features from {audio_path}")
             extractor = self._get_extractor("whisperx_transcription")
             if extractor is not None:
-                # Limit maximum number of speakers to 3
-                whisperx_features = extractor.get_feature_dict(audio_path, max_speakers=3)
-                features.update(whisperx_features)
+                try:
+                    whisperx_features = extractor.get_feature_dict(audio_path, max_speakers=3)
+                    features.update(whisperx_features)
+                except Exception as e:
+                    logging.warning("whisperx_transcription failed, skipping: %s", e)
             else:
-                print("Warning: Skipping whisperx_transcription (extractor unavailable)")
+                logging.warning("Skipping whisperx_transcription (extractor unavailable)")
 
         # Extract XLSR speech-to-text features
         if "xlsr_speech_to_text" in self.features:
