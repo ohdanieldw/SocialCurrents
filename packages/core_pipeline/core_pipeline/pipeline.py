@@ -1142,6 +1142,7 @@ class MultimodalPipeline:
             "time_seconds": video_times,
         })
         df.insert(0, "filename", filename)
+        new_cols: dict = {}
 
         # ── Audio time-series arrays ────────────────────────────────────────
         # Standard pipeline: sr=16000, hop_length=512  →  ~31.25 audio frames/sec
@@ -1159,7 +1160,7 @@ class MultimodalPipeline:
             # Clip to avoid extrapolation beyond available audio
             clipped = np.clip(video_times, audio_times[0], audio_times[-1])
             try:
-                df[key] = np.interp(clipped, audio_times, val.astype(float))
+                new_cols[key] = np.interp(clipped, audio_times, val.astype(float))
             except Exception:
                 pass
 
@@ -1177,9 +1178,9 @@ class MultimodalPipeline:
             for k in gmp_keys:
                 vals = np.array([_sf(d.get(k, 0.0)) for d in mp_pf])
                 if len(mp_fidx) == n_frames:
-                    df[k] = vals
+                    new_cols[k] = vals
                 elif len(mp_fidx) >= 2:
-                    df[k] = np.interp(np.arange(n_frames), mp_fidx, vals)
+                    new_cols[k] = np.interp(np.arange(n_frames), mp_fidx, vals)
 
         # helper: interpolate sampled-frame vision data to all n_frames
         def _interp_vision(per_sample, key_prefix):
@@ -1192,7 +1193,7 @@ class MultimodalPipeline:
                 ok = np.isfinite(vals)
                 if ok.sum() < 2:
                     continue
-                df[k] = np.interp(
+                new_cols[k] = np.interp(
                     np.arange(n_frames),
                     fidx[ok],
                     vals[ok],
@@ -1211,7 +1212,7 @@ class MultimodalPipeline:
             "video_fps", "video_total_frames", "hop_length", "sample_rate", "num_frames",
             "per_frame", "GMP_SM_pic", "video_path",
         }
-        existing_cols = set(df.columns)
+        existing_cols = set(df.columns) | set(new_cols)
         for key, val in features.items():
             if key in SKIP or key in existing_cols or callable(val):
                 continue
@@ -1225,8 +1226,10 @@ class MultimodalPipeline:
                 continue
             if isinstance(scalar, float) and not np.isfinite(scalar):
                 continue
-            df[key] = scalar
+            new_cols[key] = scalar
 
+        if new_cols:
+            df = pd.concat([df, pd.DataFrame(new_cols, index=df.index)], axis=1)
         return df
 
     def _group_features_by_model(self, features: Dict[str, Any]) -> Dict[str, Any]:
