@@ -303,7 +303,7 @@ def main() -> None:
     )
     parser.add_argument("--list-features", action="store_true", help="List available features and exit")
     parser.add_argument("--is-audio", action="store_true", help="Process files as audio instead of video")
-    parser.add_argument("--log-file", help="Path to log file (default: <output_dir>/pipeline.log)")
+    parser.add_argument("--log-file", help="Optional path for a run-level log file (per-subject logs are written automatically to each subject's output folder)")
     parser.add_argument(
         "--decimal-places",
         type=int,
@@ -349,14 +349,13 @@ def main() -> None:
 
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    log_file = args.log_file if args.log_file else output_dir / "pipeline.log"
+    _handlers: list = [logging.StreamHandler()]
+    if args.log_file:
+        _handlers.append(logging.FileHandler(args.log_file))
     logging.basicConfig(
         level=logging.INFO,
         format="%(asctime)s - %(levelname)s - %(message)s",
-        handlers=[
-            logging.FileHandler(log_file),
-            logging.StreamHandler(),
-        ],
+        handlers=_handlers,
     )
 
     if shutil.which("ffmpeg") is None:
@@ -387,12 +386,10 @@ def main() -> None:
             logging.info("  - %s", filename)
 
         logging.info("Results saved to: %s", output_dir)
-        logging.info("Log file saved to: %s", log_file)
-        logging.info("Per-video outputs: %s/<video_name>/features.json|csv|_timeseries.csv", output_dir)
+        logging.info("Per-subject outputs: %s/{dyadID}/{subjectID}/features.json|csv|_timeseries.csv|{subjectID}.log", output_dir)
 
         print(f"\nResults saved to: {output_dir}")
-        print(f"Log file saved to: {log_file}")
-        print(f"Per-video outputs: {output_dir}/<video_name>/features.json|csv|_timeseries.csv")
+        print(f"Per-subject outputs: {output_dir}/{{dyadID}}/{{subjectID}}/features.json|csv|_timeseries.csv|{{subjectID}}.log")
 
     except Exception as exc:  # pragma: no cover - defensive logging
         logging.error("Error processing files: %s", exc)

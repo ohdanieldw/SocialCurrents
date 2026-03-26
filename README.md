@@ -13,19 +13,34 @@ SocialCurrents is a multimodal feature extraction pipeline for social and behavi
 | **Speech** | Pitch, volume, spectral features (librosa, openSMILE); speech emotion recognition |
 | **Language** | Transcript (WhisperX with speaker diarization), sentiment, semantic similarity, NLI benchmarks |
 
+## Input filename convention
+
+Name your video files using the pattern `{dyadID}_{subjectID}.extension`:
+
+```
+dyad002_sub003.MP4
+dyad002_sub007.MP4
+dyad015_sub042.MP4
+```
+
+The pipeline splits on the first underscore to extract the dyad and subject IDs. If a filename does not contain an underscore, a single folder named after the file stem is created as a fallback.
+
 ## Output files
 
-For each recording session, the pipeline writes three files to your output directory:
+Each subject gets its own subfolder nested under their dyad:
 
-Each recording gets its own subfolder under the output directory (e.g., `output/run/sub007/`):
-
-| File | What it is |
-|---|---|
-| `features_timeseries.csv` | One row per video frame — pose, facial, and audio features varying over time |
-| `features.csv` | One row per recording — per-feature summary statistics (mean, SD, min, max) |
-| `features.json` | Full nested JSON with raw arrays and model metadata |
-
-The `pipeline.log` file is written at the top level of the output directory and covers the entire batch run.
+```
+output/
+  dyad002/
+    sub003/
+      features_timeseries.csv   ← one row per video frame
+      features.csv              ← one row per recording (array features → summary stats)
+      features.json             ← nested JSON with raw arrays and model metadata
+      sub003.log                ← processing log for this subject
+    sub007/
+      features_timeseries.csv
+      ...
+```
 
 The time-series CSV is the primary file for most behavioral analyses (e.g., time-lagged cross-correlations, windowed synchrony, event-locked averages).
 

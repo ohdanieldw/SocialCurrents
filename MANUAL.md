@@ -33,11 +33,13 @@ This pipeline extracts ~2,660+ features from video or audio recordings across fo
 
 Inputs can be **video files** (`.mp4`, `.avi`, `.mov`, `.mkv`) or **audio files** (`.wav`, `.mp3`, `.flac`).
 
-Each video gets its own subfolder under the output directory (e.g., `output/run/sub007/`). Outputs per video:
+Input files should be named using the convention `{dyadID}_{subjectID}.extension` (e.g., `dyad002_sub003.MP4`). The pipeline splits on the first underscore to route outputs to `output/{dyadID}/{subjectID}/`. If a filename has no underscore, a single folder named after the file stem is used as a fallback.
+
+Outputs per subject:
 - **`features_timeseries.csv`** — one row per video frame; time-varying features (audio waveform statistics, pose landmarks, facial expressions) change row-by-row while scalar features are broadcast to every row
 - **`features.csv`** — one row per input file; array-valued features are summarised as `_mean/_std/_min/_max` columns
 - **`features.json`** — nested JSON grouped by model, with full arrays and metadata
-- **`pipeline.log`** — execution log for the whole batch run, written at the top level of the output directory
+- **`{subjectID}.log`** — processing log for this subject (e.g., `sub003.log`)
 
 ---
 
@@ -138,7 +140,7 @@ usage: python run_pipeline.py [-h] [-d DATA_DIR] [-o OUTPUT_DIR] [-f FEATURES]
 | `-f`, `--features` | *(all features)* | Comma-separated list of feature names to extract |
 | `--list-features` | — | Print all available feature names grouped by category, then exit |
 | `--is-audio` | `False` | Treat input files as audio (`.wav`/`.mp3`/`.flac`) instead of video |
-| `--log-file` | `<output_dir>/pipeline.log` | Path for the log file |
+| `--log-file` | *(none)* | Optional path for a run-level log file; per-subject logs are written automatically to each subject's output folder |
 | `--check-dependencies` | — | Check whether required Python packages are installed, then exit |
 
 ### Supported input formats
@@ -175,15 +177,21 @@ After processing, the output directory contains:
 
 ```
 output/
-  pipeline.log          ← execution log (covers the whole batch run)
-  sub007/               ← one subfolder per video (named after the file stem)
-    features_timeseries.csv  ← time-indexed CSV (one row per video frame)
-    features.csv             ← summary CSV (one row per file, arrays → stats columns)
-    features.json            ← nested JSON with model groupings and full arrays
-  sub003/
-    features_timeseries.csv
-    ...
+  dyad002/                        ← one folder per dyad
+    sub003/                       ← one folder per subject
+      features_timeseries.csv     ← time-indexed CSV (one row per video frame)
+      features.csv                ← summary CSV (one row per file, arrays → stats columns)
+      features.json               ← nested JSON with model groupings and full arrays
+      sub003.log                  ← processing log for this subject
+    sub007/
+      features_timeseries.csv
+      ...
+  dyad015/
+    sub042/
+      ...
 ```
+
+Files named without an underscore (no dyadID) are written directly to `output/<stem>/` as a fallback.
 
 ---
 

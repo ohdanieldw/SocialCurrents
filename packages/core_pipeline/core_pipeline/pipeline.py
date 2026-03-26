@@ -906,6 +906,18 @@ class MultimodalPipeline:
         # Process each file and save outputs to a per-video subfolder
         results = {}
         for file_path in files:
+            stem = file_path.stem  # e.g. "dyad002_sub003"
+            if "_" in stem:
+                dyad_id, subject_id = stem.split("_", 1)
+                video_out_dir = self.output_dir / dyad_id / subject_id
+            else:
+                subject_id = stem
+                video_out_dir = self.output_dir / stem
+
+            video_out_dir.mkdir(parents=True, exist_ok=True)
+            _log_handler = logging.FileHandler(video_out_dir / f"{subject_id}.log")
+            _log_handler.setFormatter(logging.Formatter("%(asctime)s - %(levelname)s - %(message)s"))
+            logging.getLogger().addHandler(_log_handler)
             try:
                 if is_video:
                     features = self.process_video_file(file_path)
@@ -913,11 +925,12 @@ class MultimodalPipeline:
                     features = self.process_audio_file(file_path)
 
                 results[file_path.name] = features
-                video_out_dir = self.output_dir / file_path.stem
-                video_out_dir.mkdir(parents=True, exist_ok=True)
                 self._save_file_outputs(file_path.name, features, video_out_dir)
             except Exception as e:
                 print(f"Error processing {file_path}: {e}")
+            finally:
+                logging.getLogger().removeHandler(_log_handler)
+                _log_handler.close()
 
         return results
 
