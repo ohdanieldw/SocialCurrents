@@ -100,6 +100,8 @@ bash run_macos.sh --list-features
 
 **Variable frame rate videos** may cause errors. Use `--normalize-fps` to automatically re-encode to constant 25 fps before processing, or manually pre-process with `ffmpeg -i input.MP4 -vsync cfr -r 25 output.MP4`. See [MANUAL.md](MANUAL.md#known-issues) for details.
 
+If an extractor fails (e.g., missing dependency, incompatible model), the pipeline logs a warning and skips that extractor rather than crashing. All other extractors continue running and output files are still generated.
+
 For WhisperX speaker diarization, export your HuggingFace token first:
 
 ```bash
