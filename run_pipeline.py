@@ -397,10 +397,10 @@ def main() -> None:
             logging.info("  - %s", filename)
 
         logging.info("Results saved to: %s", output_dir)
-        logging.info("Per-subject outputs: %s/{dyadID}/{subjectID}/features.json|csv|_timeseries.csv|{subjectID}.log", output_dir)
+        logging.info("Per-subject outputs: %s/{dyadID}/{subjectID}/{dyadID}_{subjectID}_summary_features.csv|json, _timeseries_features.csv, .log", output_dir)
 
         print(f"\nResults saved to: {output_dir}")
-        print(f"Per-subject outputs: {output_dir}/{{dyadID}}/{{subjectID}}/features.json|csv|_timeseries.csv|{{subjectID}}.log")
+        print(f"Per-subject outputs: {output_dir}/{{dyadID}}/{{subjectID}}/{{dyadID}}_{{subjectID}}_summary_features.csv|json, _timeseries_features.csv, .log")
 
     except Exception as exc:  # pragma: no cover - defensive logging
         logging.error("Error processing files: %s", exc)

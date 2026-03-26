@@ -33,12 +33,12 @@ Each subject gets its own subfolder nested under their dyad:
 output/
   dyad002/
     sub003/
-      features_timeseries.csv   ← one row per video frame
-      features.csv              ← one row per recording (array features → summary stats)
-      features.json             ← nested JSON with raw arrays and model metadata
-      sub003.log                ← processing log for this subject
+      dyad002_sub003_timeseries_features.csv   ← one row per video frame
+      dyad002_sub003_summary_features.csv      ← one row per recording (array features → summary stats)
+      dyad002_sub003_summary_features.json     ← nested JSON with raw arrays and model metadata
+      dyad002_sub003.log                       ← processing log for this subject
     sub007/
-      features_timeseries.csv
+      dyad002_sub007_timeseries_features.csv
       ...
 ```
 

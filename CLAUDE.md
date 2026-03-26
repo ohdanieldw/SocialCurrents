@@ -67,11 +67,11 @@ external/
    - Calls `extract_features(audio_path)` for all audio/speech/NLP extractors
    - Calls each vision extractor (from `cv_models/vision/`) in order
    - MediaPipe, Py-Feat, and EmotiEffNet are always called with `keep_per_frame=True` to capture per-frame data
-3. **`process_directory()`** calls `_save_file_outputs()` for each video immediately after processing it. The output path is determined by parsing the filename: `{dyadID}_{subjectID}.ext` → `self.output_dir / dyadID / subjectID`; filenames without an underscore fall back to `self.output_dir / stem`. A per-subject `logging.FileHandler` is added before processing each file and removed after, writing to `{subjectID}.log` inside the subject folder.
-   - `features_timeseries.csv` — one row per video frame (built by `_build_timeindexed_csv()`)
-   - `features.csv` — one row per file (arrays summarised to `_mean/_std/_min/_max`)
-   - `features.json` — nested JSON grouped by model
-   - `{subjectID}.log` — processing log for this subject (e.g., `sub003.log`)
+3. **`process_directory()`** calls `_save_file_outputs()` for each video immediately after processing it. The output path is determined by parsing the filename: `{dyadID}_{subjectID}.ext` → `self.output_dir / dyadID / subjectID`; filenames without an underscore fall back to `self.output_dir / stem`. A `file_prefix` (`{dyadID}_{subjectID}`) is prepended to every output filename. A per-subject `logging.FileHandler` is added before processing each file and removed after.
+   - `{prefix}_timeseries_features.csv` — one row per video frame (built by `_build_timeindexed_csv()`); no `filename` column
+   - `{prefix}_summary_features.csv` — one row per file (arrays summarised to `_mean/_std/_min/_max`); no `filename` column
+   - `{prefix}_summary_features.json` — nested JSON grouped by model
+   - `{prefix}.log` — processing log for this subject (e.g., `dyad002_sub003.log`)
 
 ### Feature extractor conventions
 

@@ -929,13 +929,14 @@ class MultimodalPipeline:
             stem = file_path.stem  # e.g. "dyad002_sub003"
             if "_" in stem:
                 dyad_id, subject_id = stem.split("_", 1)
+                file_prefix = f"{dyad_id}_{subject_id}"
                 video_out_dir = self.output_dir / dyad_id / subject_id
             else:
-                subject_id = stem
+                file_prefix = stem
                 video_out_dir = self.output_dir / stem
 
             video_out_dir.mkdir(parents=True, exist_ok=True)
-            _log_handler = logging.FileHandler(video_out_dir / f"{subject_id}.log")
+            _log_handler = logging.FileHandler(video_out_dir / f"{file_prefix}.log")
             _log_handler.setFormatter(logging.Formatter("%(asctime)s - %(levelname)s - %(message)s"))
             logging.getLogger().addHandler(_log_handler)
             try:
@@ -945,7 +946,7 @@ class MultimodalPipeline:
                     features = self.process_audio_file(file_path)
 
                 results[file_path.name] = features
-                self._save_file_outputs(file_path.name, features, video_out_dir)
+                self._save_file_outputs(file_prefix, features, video_out_dir)
             except Exception as e:
                 print(f"Error processing {file_path}: {e}")
             finally:
@@ -954,8 +955,8 @@ class MultimodalPipeline:
 
         return results
 
-    def _save_file_outputs(self, filename: str, file_features: Dict[str, Any], out_dir: Path) -> None:
-        """Save features.json, features.csv, and features_timeseries.csv for one video."""
+    def _save_file_outputs(self, file_prefix: str, file_features: Dict[str, Any], out_dir: Path) -> None:
+        """Save {prefix}_summary_features.json, _summary_features.csv, and _timeseries_features.csv for one video."""
         import pandas as pd
 
         # Build JSON
@@ -993,37 +994,36 @@ class MultimodalPipeline:
                         else:
                             file_json[group_name]["features"][key] = value
 
-            json_path = out_dir / "features.json"
+            json_path = out_dir / f"{file_prefix}_summary_features.json"
             with open(json_path, "w") as f:
                 json.dump(file_json, f, indent=2)
             print(f"  JSON saved to {json_path}")
         except Exception as e:
-            print(f"Warning: Could not save features.json for {filename}: {e}")
+            print(f"Warning: Could not save summary_features.json for {file_prefix}: {e}")
             traceback.print_exc()
 
         # Flat CSV (one row)
         try:
-            row = {"filename": filename}
-            row.update(self._flatten_for_csv(file_features))
-            df = pd.DataFrame([row]).set_index("filename")
+            row = self._flatten_for_csv(file_features)
+            df = pd.DataFrame([row])
             df = df.round(self.decimal_places)
-            csv_path = out_dir / "features.csv"
-            df.to_csv(csv_path)
+            csv_path = out_dir / f"{file_prefix}_summary_features.csv"
+            df.to_csv(csv_path, index=False)
             print(f"  CSV saved to {csv_path}  ({len(df.columns)} columns)")
         except Exception as e:
-            print(f"Warning: Could not save features.csv for {filename}: {e}")
+            print(f"Warning: Could not save summary_features.csv for {file_prefix}: {e}")
             traceback.print_exc()
 
         # Time-series CSV (one row per frame)
         try:
-            part = self._build_timeindexed_csv(filename, file_features)
+            part = self._build_timeindexed_csv(file_features)
             if part is not None:
                 part = part.round(self.decimal_places)
-                ts_path = out_dir / "features_timeseries.csv"
+                ts_path = out_dir / f"{file_prefix}_timeseries_features.csv"
                 part.to_csv(ts_path, index=False)
                 print(f"  Time-series CSV saved to {ts_path}  ({len(part)} rows × {len(part.columns)} columns)")
         except Exception as e:
-            print(f"Warning: Could not save features_timeseries.csv for {filename}: {e}")
+            print(f"Warning: Could not save timeseries_features.csv for {file_prefix}: {e}")
             traceback.print_exc()
 
     # Keys that hold per-frame lists-of-dicts — skip in flat CSV, used only for time-indexed CSV
@@ -1117,7 +1117,7 @@ class MultimodalPipeline:
 
         return row
 
-    def _build_timeindexed_csv(self, filename: str, features: Dict[str, Any]):
+    def _build_timeindexed_csv(self, features: Dict[str, Any]):
         """Return a per-frame DataFrame (one row per video frame) for *filename*.
 
         Columns:
@@ -1141,7 +1141,6 @@ class MultimodalPipeline:
             "frame_idx": np.arange(n_frames, dtype=np.int32),
             "time_seconds": video_times,
         })
-        df.insert(0, "filename", filename)
         new_cols: dict = {}
 
         # ── Audio time-series arrays ────────────────────────────────────────
