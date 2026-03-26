@@ -1210,6 +1210,11 @@ class MultimodalPipeline:
         SKIP = self._PER_FRAME_KEYS | {
             "video_fps", "video_total_frames", "hop_length", "sample_rate", "num_frames",
             "per_frame", "GMP_SM_pic", "video_path",
+            # metadata/config — summary CSV only
+            "DEB_analysis_timestamp", "BERT_analysis_timestamp",
+            "DEB_model_name", "DEB_device",
+            "BERT_embed_model", "BERT_rerank_model", "BERT_device",
+            "total_frames", "landmarks_detected", "detection_rate", "avg_landmarks",
         }
         existing_cols = set(df.columns) | set(new_cols)
         for key, val in features.items():
