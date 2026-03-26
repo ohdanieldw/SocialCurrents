@@ -251,6 +251,23 @@ def _print_feature_catalog() -> None:
     print("\nTip: pass --features name1,name2 to limit extraction, or omit to run everything.")
 
 
+def _normalize_fps(input_files: _ListType[Path], tmp_dir: Path) -> _ListType[Path]:
+    """Re-encode video files to constant 25 fps in tmp_dir, preserving original filenames."""
+    import subprocess
+
+    normalized = []
+    for src in input_files:
+        dst = tmp_dir / src.name
+        logging.info("--normalize-fps: re-encoding %s → %s", src.name, dst)
+        subprocess.run(
+            ["ffmpeg", "-y", "-i", str(src), "-vsync", "cfr", "-r", "25", str(dst)],
+            check=True,
+            capture_output=True,
+        )
+        normalized.append(dst)
+    return normalized
+
+
 def _check_python_dependencies() -> bool:
     """Verify required Python modules are importable."""
     import importlib
@@ -312,6 +329,11 @@ def main() -> None:
         help=f"Skip CPU-prohibitive extractors ({', '.join(SLOW_FEATURES)}); has no effect when -f is used",
     )
     parser.add_argument("--is-audio", action="store_true", help="Process files as audio instead of video")
+    parser.add_argument(
+        "--normalize-fps",
+        action="store_true",
+        help="Re-encode input videos to constant 25 fps via ffmpeg before processing (fixes VFR issues)",
+    )
     parser.add_argument("--log-file", help="Optional path for a run-level log file (per-subject logs are written automatically to each subject's output folder)")
     parser.add_argument(
         "--decimal-places",
@@ -393,12 +415,30 @@ def main() -> None:
             logging.error("Input path %s does not exist.", input_path)
             sys.exit(1)
 
-        if input_path.is_file():
-            logging.info("Processing single file: %s", input_path)
-            results = pipeline.process_files([input_path], is_video=(not args.is_audio))
-        else:
-            logging.info("Processing directory: %s", input_path)
-            results = pipeline.process_directory(input_path, is_video=(not args.is_audio))
+        _tmp_ctx = None  # temp dir context manager, if --normalize-fps
+        try:
+            if input_path.is_file():
+                files_to_process = [input_path]
+            else:
+                extensions = [".mp4", ".MP4", ".avi", ".mov", ".MOV", ".mkv"] if not args.is_audio else [".wav", ".mp3", ".flac"]
+                files_to_process = []
+                for ext in extensions:
+                    files_to_process.extend(list(input_path.glob(f"*{ext}")))
+
+            if args.normalize_fps and not args.is_audio:
+                from tempfile import TemporaryDirectory
+                _tmp_ctx = TemporaryDirectory(prefix="sc_cfr_")
+                tmp_dir = Path(_tmp_ctx.name)
+                files_to_process = _normalize_fps(files_to_process, tmp_dir)
+
+            if input_path.is_file():
+                logging.info("Processing single file: %s", input_path)
+            else:
+                logging.info("Processing directory: %s", input_path)
+            results = pipeline.process_files(files_to_process, is_video=(not args.is_audio))
+        finally:
+            if _tmp_ctx is not None:
+                _tmp_ctx.cleanup()
 
         logging.info("Successfully processed %d files.", len(results))
         for filename in results:

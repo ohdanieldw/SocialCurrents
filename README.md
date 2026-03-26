@@ -80,6 +80,9 @@ bash run_macos.sh -i data/ -o output/ -f basic_audio,mediapipe_pose_vision,pyfea
 # Process a single video file
 bash run_macos.sh -i data/dyad002_sub003.MP4 -o output/
 
+# Fix variable-frame-rate videos automatically (re-encodes to 25 fps)
+bash run_macos.sh -i data/ -o output/ --normalize-fps
+
 # Round CSV floats to 2 decimal places (default: 3)
 bash run_macos.sh -i data/ -o output/ --decimal-places 2
 
@@ -89,7 +92,7 @@ bash run_macos.sh --list-features
 
 `--skip-slow` excludes three extractors that are prohibitively slow on CPU: `s2t_speech_to_text`, `xlsr_speech_to_text`, and `elmo_text`. When `-f` is used instead, `--skip-slow` has no effect — all explicitly requested extractors run regardless.
 
-**Note:** Videos with variable frame rates may cause errors. Pre-process with `ffmpeg -i input.MP4 -vsync cfr -r 25 output.MP4` — see [MANUAL.md](MANUAL.md#known-issues) for details.
+**Variable frame rate videos** may cause errors. Use `--normalize-fps` to automatically re-encode to constant 25 fps before processing, or manually pre-process with `ffmpeg -i input.MP4 -vsync cfr -r 25 output.MP4`. See [MANUAL.md](MANUAL.md#known-issues) for details.
 
 For WhisperX speaker diarization, export your HuggingFace token first:
 
