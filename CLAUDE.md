@@ -67,10 +67,11 @@ external/
    - Calls `extract_features(audio_path)` for all audio/speech/NLP extractors
    - Calls each vision extractor (from `cv_models/vision/`) in order
    - MediaPipe, Py-Feat, and EmotiEffNet are always called with `keep_per_frame=True` to capture per-frame data
-3. **`process_directory()`** saves three outputs after all files are processed:
-   - `pipeline_features_timeseries.csv` — one row per video frame (built by `_build_timeindexed_csv()`)
-   - `pipeline_features.csv` — one row per file (arrays summarised to `_mean/_std/_min/_max`)
-   - `pipeline_features.json` — nested JSON grouped by model
+3. **`process_directory()`** calls `_save_file_outputs()` for each video immediately after processing it, writing to `self.output_dir / file_path.stem /`:
+   - `features_timeseries.csv` — one row per video frame (built by `_build_timeindexed_csv()`)
+   - `features.csv` — one row per file (arrays summarised to `_mean/_std/_min/_max`)
+   - `features.json` — nested JSON grouped by model
+   - `pipeline.log` is written at the top-level output directory (covers the whole batch run)
 
 ### Feature extractor conventions
 

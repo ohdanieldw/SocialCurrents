@@ -4,6 +4,7 @@ Main pipeline for processing audio files with all available features.
 """
 import os
 import json
+import logging
 import traceback
 import numpy as np
 from pathlib import Path
@@ -902,7 +903,7 @@ class MultimodalPipeline:
         if not files:
             raise FileNotFoundError(f"No {'video' if is_video else 'audio'} files found in {directory}")
 
-        # Process each file
+        # Process each file and save outputs to a per-video subfolder
         results = {}
         for file_path in files:
             try:
@@ -912,107 +913,85 @@ class MultimodalPipeline:
                     features = self.process_audio_file(file_path)
 
                 results[file_path.name] = features
+                video_out_dir = self.output_dir / file_path.stem
+                video_out_dir.mkdir(parents=True, exist_ok=True)
+                self._save_file_outputs(file_path.name, features, video_out_dir)
             except Exception as e:
                 print(f"Error processing {file_path}: {e}")
 
-        # Create a consolidated JSON file with features from all files
-        try:
-            consolidated_json = {}
-            for filename, file_features in results.items():
-                # Group features by model/algorithm categories
-                grouped_features = self._group_features_by_model(file_features)
-
-                # Convert the grouped features to JSON-compatible format
-                consolidated_json[filename] = {}
-
-                for group_name, group_data in grouped_features.items():
-                    consolidated_json[filename][group_name] = {
-                        "Feature": group_data["Feature"],
-                        "Model": group_data["Model"],
-                        "features": {}
-                    }
-
-                    # Process each feature in the group
-                    for key, value in group_data["features"].items():
-                        if isinstance(value, np.ndarray):
-                            if value.size > 1000:
-                                # Include statistics for large arrays
-                                consolidated_json[filename][group_name]["features"][key] = {
-                                    'mean': float(np.mean(value)),
-                                    'min': float(np.min(value)),
-                                    'max': float(np.max(value)),
-                                    'std': float(np.std(value)),
-                                    'shape': list(value.shape),
-                                    'dtype': str(value.dtype),
-                                    'samples': [float(x) if isinstance(x, (np.number, np.float32, np.float64)) else x for x in value[:5].tolist()] if value.size > 5 else [float(x) if isinstance(x, (np.number, np.float32, np.float64)) else x for x in value.tolist()]
-                                }
-                            else:
-                                # Convert numpy values to Python native types
-                                if value.dtype.kind in 'fc':  # float or complex
-                                    consolidated_json[filename][group_name]["features"][key] = [float(x) for x in value.tolist()]
-                                elif value.dtype.kind in 'iu':  # integer
-                                    consolidated_json[filename][group_name]["features"][key] = [int(x) for x in value.tolist()]
-                                else:
-                                    consolidated_json[filename][group_name]["features"][key] = value.tolist()
-                        elif not callable(value):
-                            # Handle other numpy types that might be scalars
-                            if isinstance(value, (np.number, np.float32, np.float64, np.int32, np.int64)):
-                                consolidated_json[filename][group_name]["features"][key] = float(value) if isinstance(value, (np.float32, np.float64)) else int(value)
-                            else:
-                                consolidated_json[filename][group_name]["features"][key] = value
-
-            # Save consolidated JSON
-            with open(self.output_dir / "pipeline_features.json", "w") as f:
-                json.dump(consolidated_json, f, indent=2)
-
-            print(f"Consolidated features saved to {self.output_dir / 'pipeline_features.json'}")
-
-        except Exception as e:
-            print(f"Warning: Could not save consolidated JSON: {e}")
-            traceback.print_exc()
-
-        # Save flat CSV (one row per file, one column per feature)
-        try:
-            import pandas as pd
-            csv_rows = []
-            for filename, file_features in results.items():
-                row = {"filename": filename}
-                row.update(self._flatten_for_csv(file_features))
-                csv_rows.append(row)
-
-            if csv_rows:
-                df = pd.DataFrame(csv_rows).set_index("filename")
-                df = df.round(self.decimal_places)
-                csv_path = self.output_dir / "pipeline_features.csv"
-                df.to_csv(csv_path)
-                print(f"CSV saved to {csv_path}  ({len(df)} rows × {len(df.columns)} columns)")
-        except Exception as e:
-            print(f"Warning: Could not save CSV: {e}")
-            traceback.print_exc()
-
-        # Save time-indexed CSV (one row per video frame)
-        try:
-            import pandas as pd
-            ts_parts = []
-            for filename, file_features in results.items():
-                part = self._build_timeindexed_csv(filename, file_features)
-                if part is not None:
-                    ts_parts.append(part)
-
-            if ts_parts:
-                ts_df = pd.concat(ts_parts, ignore_index=True)
-                ts_df = ts_df.round(self.decimal_places)
-                ts_path = self.output_dir / "pipeline_features_timeseries.csv"
-                ts_df.to_csv(ts_path, index=False)
-                print(
-                    f"Time-series CSV saved to {ts_path}  "
-                    f"({len(ts_df)} rows × {len(ts_df.columns)} columns)"
-                )
-        except Exception as e:
-            print(f"Warning: Could not save time-series CSV: {e}")
-            traceback.print_exc()
-
         return results
+
+    def _save_file_outputs(self, filename: str, file_features: Dict[str, Any], out_dir: Path) -> None:
+        """Save features.json, features.csv, and features_timeseries.csv for one video."""
+        import pandas as pd
+
+        # Build JSON
+        try:
+            grouped_features = self._group_features_by_model(file_features)
+            file_json: Dict[str, Any] = {}
+            for group_name, group_data in grouped_features.items():
+                file_json[group_name] = {
+                    "Feature": group_data["Feature"],
+                    "Model": group_data["Model"],
+                    "features": {},
+                }
+                for key, value in group_data["features"].items():
+                    if isinstance(value, np.ndarray):
+                        if value.size > 1000:
+                            file_json[group_name]["features"][key] = {
+                                "mean": float(np.mean(value)),
+                                "min": float(np.min(value)),
+                                "max": float(np.max(value)),
+                                "std": float(np.std(value)),
+                                "shape": list(value.shape),
+                                "dtype": str(value.dtype),
+                                "samples": [float(x) if isinstance(x, (np.number, np.float32, np.float64)) else x for x in value[:5].tolist()] if value.size > 5 else [float(x) if isinstance(x, (np.number, np.float32, np.float64)) else x for x in value.tolist()],
+                            }
+                        else:
+                            if value.dtype.kind in "fc":
+                                file_json[group_name]["features"][key] = [float(x) for x in value.tolist()]
+                            elif value.dtype.kind in "iu":
+                                file_json[group_name]["features"][key] = [int(x) for x in value.tolist()]
+                            else:
+                                file_json[group_name]["features"][key] = value.tolist()
+                    elif not callable(value):
+                        if isinstance(value, (np.number, np.float32, np.float64, np.int32, np.int64)):
+                            file_json[group_name]["features"][key] = float(value) if isinstance(value, (np.float32, np.float64)) else int(value)
+                        else:
+                            file_json[group_name]["features"][key] = value
+
+            json_path = out_dir / "features.json"
+            with open(json_path, "w") as f:
+                json.dump(file_json, f, indent=2)
+            print(f"  JSON saved to {json_path}")
+        except Exception as e:
+            print(f"Warning: Could not save features.json for {filename}: {e}")
+            traceback.print_exc()
+
+        # Flat CSV (one row)
+        try:
+            row = {"filename": filename}
+            row.update(self._flatten_for_csv(file_features))
+            df = pd.DataFrame([row]).set_index("filename")
+            df = df.round(self.decimal_places)
+            csv_path = out_dir / "features.csv"
+            df.to_csv(csv_path)
+            print(f"  CSV saved to {csv_path}  ({len(df.columns)} columns)")
+        except Exception as e:
+            print(f"Warning: Could not save features.csv for {filename}: {e}")
+            traceback.print_exc()
+
+        # Time-series CSV (one row per frame)
+        try:
+            part = self._build_timeindexed_csv(filename, file_features)
+            if part is not None:
+                part = part.round(self.decimal_places)
+                ts_path = out_dir / "features_timeseries.csv"
+                part.to_csv(ts_path, index=False)
+                print(f"  Time-series CSV saved to {ts_path}  ({len(part)} rows × {len(part.columns)} columns)")
+        except Exception as e:
+            print(f"Warning: Could not save features_timeseries.csv for {filename}: {e}")
+            traceback.print_exc()
 
     # Keys that hold per-frame lists-of-dicts — skip in flat CSV, used only for time-indexed CSV
     _PER_FRAME_KEYS = frozenset({

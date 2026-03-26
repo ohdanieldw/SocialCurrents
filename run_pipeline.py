@@ -388,15 +388,11 @@ def main() -> None:
 
         logging.info("Results saved to: %s", output_dir)
         logging.info("Log file saved to: %s", log_file)
-        logging.info("Features JSON:        %s", output_dir / "pipeline_features.json")
-        logging.info("Features CSV:         %s", output_dir / "pipeline_features.csv")
-        logging.info("Time-series CSV:      %s", output_dir / "pipeline_features_timeseries.csv")
+        logging.info("Per-video outputs: %s/<video_name>/features.json|csv|_timeseries.csv", output_dir)
 
         print(f"\nResults saved to: {output_dir}")
         print(f"Log file saved to: {log_file}")
-        print(f"Features JSON:        {output_dir / 'pipeline_features.json'}")
-        print(f"Features CSV:         {output_dir / 'pipeline_features.csv'}")
-        print(f"Time-series CSV:      {output_dir / 'pipeline_features_timeseries.csv'}")
+        print(f"Per-video outputs: {output_dir}/<video_name>/features.json|csv|_timeseries.csv")
 
     except Exception as exc:  # pragma: no cover - defensive logging
         logging.error("Error processing files: %s", exc)

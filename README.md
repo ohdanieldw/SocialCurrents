@@ -17,11 +17,15 @@ SocialCurrents is a multimodal feature extraction pipeline for social and behavi
 
 For each recording session, the pipeline writes three files to your output directory:
 
+Each recording gets its own subfolder under the output directory (e.g., `output/run/sub007/`):
+
 | File | What it is |
 |---|---|
-| `pipeline_features_timeseries.csv` | One row per video frame — pose, facial, and audio features varying over time |
-| `pipeline_features.csv` | One row per recording — per-feature summary statistics (mean, SD, min, max) |
-| `pipeline_features.json` | Full nested JSON with raw arrays and model metadata |
+| `features_timeseries.csv` | One row per video frame — pose, facial, and audio features varying over time |
+| `features.csv` | One row per recording — per-feature summary statistics (mean, SD, min, max) |
+| `features.json` | Full nested JSON with raw arrays and model metadata |
+
+The `pipeline.log` file is written at the top level of the output directory and covers the entire batch run.
 
 The time-series CSV is the primary file for most behavioral analyses (e.g., time-lagged cross-correlations, windowed synchrony, event-locked averages).
 

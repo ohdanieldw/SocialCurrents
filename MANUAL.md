@@ -33,10 +33,11 @@ This pipeline extracts ~2,660+ features from video or audio recordings across fo
 
 Inputs can be **video files** (`.mp4`, `.avi`, `.mov`, `.mkv`) or **audio files** (`.wav`, `.mp3`, `.flac`).
 
-Outputs are saved to the output directory in three formats:
-- **`pipeline_features_timeseries.csv`** — one row per video frame; time-varying features (audio waveform statistics, pose landmarks, facial expressions) change row-by-row while scalar features are broadcast to every row
-- **`pipeline_features.csv`** — one row per input file; array-valued features are summarised as `_mean/_std/_min/_max` columns
-- **`pipeline_features.json`** — nested JSON grouped by model, with full arrays and metadata
+Each video gets its own subfolder under the output directory (e.g., `output/run/sub007/`). Outputs per video:
+- **`features_timeseries.csv`** — one row per video frame; time-varying features (audio waveform statistics, pose landmarks, facial expressions) change row-by-row while scalar features are broadcast to every row
+- **`features.csv`** — one row per input file; array-valued features are summarised as `_mean/_std/_min/_max` columns
+- **`features.json`** — nested JSON grouped by model, with full arrays and metadata
+- **`pipeline.log`** — execution log for the whole batch run, written at the top level of the output directory
 
 ---
 
@@ -174,19 +175,19 @@ After processing, the output directory contains:
 
 ```
 output/
-  pipeline_features_timeseries.csv  ← time-indexed CSV (one row per video frame)
-  pipeline_features.csv             ← summary CSV (one row per file, arrays → stats columns)
-  pipeline_features.json            ← nested JSON with model groupings and full arrays
-  pipeline.log                      ← execution log
-  features/
-    <filename>_features.json        ← per-file feature JSON
-  audio/
-    separated/                      ← speech-separated waveforms (if speech_separation enabled)
+  pipeline.log          ← execution log (covers the whole batch run)
+  sub007/               ← one subfolder per video (named after the file stem)
+    features_timeseries.csv  ← time-indexed CSV (one row per video frame)
+    features.csv             ← summary CSV (one row per file, arrays → stats columns)
+    features.json            ← nested JSON with model groupings and full arrays
+  sub003/
+    features_timeseries.csv
+    ...
 ```
 
 ---
 
-### Time-series CSV (`pipeline_features_timeseries.csv`)
+### Time-series CSV (`features_timeseries.csv`)
 
 The primary analysis output. Each row represents one video frame. Columns:
 
@@ -212,7 +213,7 @@ The primary analysis output. Each row represents one video frame. Columns:
 ```python
 import pandas as pd
 
-ts = pd.read_csv("output/pipeline_features_timeseries.csv")
+ts = pd.read_csv("output/sub007/features_timeseries.csv")
 
 # Pose visibility for left wrist landmark over time
 ts.plot(x="time_seconds", y="GMP_land_visi_16")
@@ -226,13 +227,13 @@ ts.plot(x="time_seconds", y="oc_audvol")
 
 ---
 
-### Summary CSV (`pipeline_features.csv`)
+### Summary CSV (`features.csv`)
 
 One row per input file. Array-valued features are summarised into statistics columns. Useful for file-level comparisons.
 
 ```python
 import pandas as pd
-df = pd.read_csv("output/pipeline_features.csv", index_col="filename")
+df = pd.read_csv("output/sub007/features.csv", index_col="filename")
 df["oc_audvol_mean"]      # mean volume across the recording
 df["pf_happiness"]        # mean Py-Feat happiness (already a scalar in this file)
 df["GMP_land_visi_26"]    # mean visibility of landmark 26 across all frames
@@ -250,7 +251,7 @@ df["GMP_land_visi_26"]    # mean visibility of landmark 26 across all frames
 
 ---
 
-### JSON (`pipeline_features.json`)
+### JSON (`features.json`)
 
 Nested structure grouped by model. Large arrays (>1000 elements) are stored as statistics objects:
 
