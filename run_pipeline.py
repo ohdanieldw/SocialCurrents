@@ -293,7 +293,8 @@ def _check_python_dependencies() -> bool:
 def main() -> None:
     """Entry point for running the multimodal pipeline from the CLI."""
     parser = argparse.ArgumentParser(description="Multimodal Data Pipeline")
-    parser.add_argument("-d", "--data-dir", default="data", help="Directory with video/audio files")
+    parser.add_argument("-i", "--input", default="data", help="Input video/audio file or directory")
+    parser.add_argument("-d", "--data-dir", dest="input", help=argparse.SUPPRESS)
     parser.add_argument(
         "-o",
         "--output-dir",
@@ -325,6 +326,9 @@ def main() -> None:
     )
     parser.add_argument("--version", action="version", version="SocialCurrents 0.1.0")
     args = parser.parse_args()
+
+    if any(a in sys.argv for a in ("-d", "--data-dir")):
+        print("Warning: -d/--data-dir is deprecated, use -i/--input instead", file=sys.stderr)
 
     if args.list_features:
         _print_feature_catalog()
@@ -384,13 +388,17 @@ def main() -> None:
         except (ImportError, AttributeError):
             logging.info("torch not fully available or CUDA check failed; continuing with CPU.")
 
-        data_dir = Path(args.data_dir)
-        if not data_dir.exists():
-            logging.error("Data directory %s does not exist.", data_dir)
+        input_path = Path(args.input)
+        if not input_path.exists():
+            logging.error("Input path %s does not exist.", input_path)
             sys.exit(1)
 
-        logging.info("Processing directory: %s", data_dir)
-        results = pipeline.process_directory(data_dir, is_video=(not args.is_audio))
+        if input_path.is_file():
+            logging.info("Processing single file: %s", input_path)
+            results = pipeline.process_files([input_path], is_video=(not args.is_audio))
+        else:
+            logging.info("Processing directory: %s", input_path)
+            results = pipeline.process_directory(input_path, is_video=(not args.is_audio))
 
         logging.info("Successfully processed %d files.", len(results))
         for filename in results:

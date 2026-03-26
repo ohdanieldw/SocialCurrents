@@ -98,16 +98,16 @@ If you use a custom name, edit the `ENV_NAME` variable at the top of `run_macos.
 
 ```bash
 # Run on a directory of videos (creates output/ subfolder automatically)
-bash run_macos.sh -d data/
+bash run_macos.sh -i data/
 
 # Specify an output directory
-bash run_macos.sh -d data/ -o results/session1/
+bash run_macos.sh -i data/ -o results/session1/
 
 # Process audio files instead of video
-bash run_macos.sh -d data/ --is-audio
+bash run_macos.sh -i data/ --is-audio
 
 # Run only a subset of features (faster)
-bash run_macos.sh -d data/ -f basic_audio,librosa_spectral,mediapipe_pose_vision
+bash run_macos.sh -i data/ -f basic_audio,librosa_spectral,mediapipe_pose_vision
 
 # List all available features
 bash run_macos.sh --list-features
@@ -120,7 +120,7 @@ Alternatively, activate the environment manually and run Python directly:
 
 ```bash
 conda activate pipeline-env
-python run_pipeline.py -d data/ -o output/
+python run_pipeline.py -i data/ -o output/
 ```
 
 ---
@@ -128,14 +128,15 @@ python run_pipeline.py -d data/ -o output/
 ## CLI Reference
 
 ```
-usage: python run_pipeline.py [-h] [-d DATA_DIR] [-o OUTPUT_DIR] [-f FEATURES]
-                              [--list-features] [--is-audio] [--log-file LOG_FILE]
+usage: python run_pipeline.py [-h] [-i INPUT] [-o OUTPUT_DIR] [-f FEATURES]
+                              [--list-features] [--skip-slow] [--is-audio]
+                              [--log-file LOG_FILE] [--decimal-places N]
                               [--check-dependencies]
 ```
 
 | Flag | Default | Description |
 |---|---|---|
-| `-d`, `--data-dir` | `data/` | Directory containing input video or audio files |
+| `-i`, `--input` | `data/` | Input video/audio file or directory |
 | `-o`, `--output-dir` | `output/YYYYMMDD_HHMMSS/` | Directory where results are saved |
 | `-f`, `--features` | *(all features)* | Comma-separated list of feature names to extract |
 | `--list-features` | — | Print all available feature names grouped by category, then exit |
@@ -158,13 +159,13 @@ Pass a comma-separated list to `-f` / `--features`:
 
 ```bash
 # Audio only
-python run_pipeline.py -d data/ -f basic_audio,librosa_spectral,opensmile
+python run_pipeline.py -i data/ -f basic_audio,librosa_spectral,opensmile
 
 # Pose and face only
-python run_pipeline.py -d data/ -f mediapipe_pose_vision,pyfeat_vision,emotieffnet_vision
+python run_pipeline.py -i data/ -f mediapipe_pose_vision,pyfeat_vision,emotieffnet_vision
 
 # Quick text analysis on top of transcription
-python run_pipeline.py -d data/ -f whisperx_transcription,deberta_text,sbert_text
+python run_pipeline.py -i data/ -f whisperx_transcription,deberta_text,sbert_text
 ```
 
 Run `--list-features` to see all names.
@@ -831,7 +832,7 @@ Default cache location: `~/.cache/huggingface/hub/`
 ### Running out of memory
 Use `-f` to select only the features you need:
 ```bash
-bash run_macos.sh -d data/ -f basic_audio,librosa_spectral,mediapipe_pose_vision
+bash run_macos.sh -i data/ -f basic_audio,librosa_spectral,mediapipe_pose_vision
 ```
 Vision models are the heaviest consumers. Audio-only runs are much lighter.
 
@@ -840,5 +841,5 @@ Source conda's shell hook before running:
 ```bash
 source "$(conda info --base)/etc/profile.d/conda.sh"
 conda activate pipeline-env
-python run_pipeline.py -d data/
+python run_pipeline.py -i data/
 ```

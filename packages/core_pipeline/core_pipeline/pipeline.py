@@ -923,9 +923,13 @@ class MultimodalPipeline:
         if not files:
             raise FileNotFoundError(f"No {'video' if is_video else 'audio'} files found in {directory}")
 
-        # Process each file and save outputs to a per-video subfolder
+        return self.process_files(files, is_video)
+
+    def process_files(self, files: List[Path], is_video: bool = True) -> Dict[str, Dict[str, Any]]:
+        """Process a list of file paths, saving outputs to per-subject subfolders."""
         results = {}
         for file_path in files:
+            file_path = Path(file_path)
             stem = file_path.stem  # e.g. "dyad002_sub003"
             if "_" in stem:
                 dyad_id, subject_id = stem.split("_", 1)

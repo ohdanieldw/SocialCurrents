@@ -69,13 +69,19 @@ Setup takes 5–15 minutes on first run. It creates a conda environment called `
 
 ```bash
 # Run on a folder of video files
-bash run_macos.sh -d data/ -o output/
+bash run_macos.sh -i data/ -o output/
 
 # Skip CPU-prohibitive extractors (recommended on CPU-only machines)
-bash run_macos.sh -d data/ -o output/ --skip-slow
+bash run_macos.sh -i data/ -o output/ --skip-slow
 
 # Run only specific feature extractors (faster)
-bash run_macos.sh -d data/ -o output/ -f basic_audio,mediapipe_pose_vision,pyfeat_vision
+bash run_macos.sh -i data/ -o output/ -f basic_audio,mediapipe_pose_vision,pyfeat_vision
+
+# Process a single video file
+bash run_macos.sh -i data/dyad002_sub003.MP4 -o output/
+
+# Round CSV floats to 2 decimal places (default: 3)
+bash run_macos.sh -i data/ -o output/ --decimal-places 2
 
 # See all available extractors
 bash run_macos.sh --list-features
@@ -83,28 +89,30 @@ bash run_macos.sh --list-features
 
 `--skip-slow` excludes three extractors that are prohibitively slow on CPU: `s2t_speech_to_text`, `xlsr_speech_to_text`, and `elmo_text`. When `-f` is used instead, `--skip-slow` has no effect — all explicitly requested extractors run regardless.
 
+**Note:** Videos with variable frame rates may cause errors. Pre-process with `ffmpeg -i input.MP4 -vsync cfr -r 25 output.MP4` — see [MANUAL.md](MANUAL.md#known-issues) for details.
+
 For WhisperX speaker diarization, export your HuggingFace token first:
 
 ```bash
 export HF_TOKEN=hf_your_token_here
-bash run_macos.sh -d data/ -o output/
+bash run_macos.sh -i data/ -o output/
 ```
 
 ### Common workflows
 
 **"I want movement and facial data only"**
 ```bash
-bash run_macos.sh -d data/ -f mediapipe_pose_vision,pyfeat_vision,emotieffnet_vision
+bash run_macos.sh -i data/ -f mediapipe_pose_vision,pyfeat_vision,emotieffnet_vision
 ```
 
 **"I want speech and language features"**
 ```bash
-bash run_macos.sh -d data/ -f basic_audio,librosa_spectral,whisperx_transcription,deberta_text,sbert_text
+bash run_macos.sh -i data/ -f basic_audio,librosa_spectral,whisperx_transcription,deberta_text,sbert_text
 ```
 
 **"I want everything"**
 ```bash
-bash run_macos.sh -d data/ -o output/
+bash run_macos.sh -i data/ -o output/
 ```
 
 ## Feature extractors
@@ -165,6 +173,10 @@ See [CHANGELOG.md](CHANGELOG.md) for version history.
 If you use SocialCurrents in published research, please cite:
 
 > Oh, D. D. (2026). *SocialCurrents: A multimodal feature extraction pipeline for social and behavioral research* (Version 0.1.0) [Software]. GitHub. https://github.com/ohdanieldw/socialcurrents
+
+## Acknowledgments
+
+Initial pipeline scaffolding by Kenneth Dao; testing and debugging by Shuo Duan. All subsequent development, integration, and testing by Daniel DongWon Oh.
 
 ## License
 

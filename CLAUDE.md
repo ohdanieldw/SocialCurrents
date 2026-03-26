@@ -9,14 +9,14 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 bash setup_macos.sh
 
 # Run on a directory of videos
-bash run_macos.sh -d data/ -o output/
+bash run_macos.sh -i data/ -o output/
 
 # Run specific features only (faster)
-bash run_macos.sh -d data/ -f basic_audio,librosa_spectral,mediapipe_pose_vision
+bash run_macos.sh -i data/ -f basic_audio,librosa_spectral,mediapipe_pose_vision
 
 # Run directly after activating env
 conda activate pipeline-env
-python run_pipeline.py -d data/ -o output/
+python run_pipeline.py -i data/ -o output/
 python run_pipeline.py --list-features
 python run_pipeline.py --check-dependencies
 ```
@@ -34,6 +34,16 @@ Pre-process with ffmpeg to convert to constant frame rate before running the pip
 ```bash
 ffmpeg -i input.MP4 -vsync cfr -r 25 output.MP4
 ```
+
+### WhisperX setup
+WhisperX speaker diarization requires:
+- `pyannote.audio` installed
+- A HuggingFace token: run `huggingface-cli login`
+- Accept model terms at https://huggingface.co/pyannote/speaker-diarization-3.1 and https://huggingface.co/pyannote/segmentation-3.0
+
+### CPU-only limitations
+These extractors are too slow without GPU and should generally be skipped on CPU-only machines (use `--skip-slow` or exclude via `-f`):
+`pyfeat_vision`, `facer_vision`, `optical_flow_vision`, `avhubert_vision`, `rife_vision`, `fact_vision`, `video_frames_vision`
 
 ## Environment
 
@@ -60,7 +70,7 @@ external/
 
 ### Execution flow
 
-1. **`run_pipeline.py`** parses CLI args → calls `MultimodalPipeline(features=[...]).process_directory(data_dir)`
+1. **`run_pipeline.py`** parses CLI args → calls `MultimodalPipeline(features=[...]).process_directory(input_path)` or `.process_files([input_path])`
 2. **`MultimodalPipeline.process_video_file()`** (`packages/core_pipeline/core_pipeline/pipeline.py`):
    - Captures video FPS and total frame count
    - Extracts 16 kHz mono WAV to a temp dir via ffmpeg (`audio_models/utils/audio_extraction.py`)
