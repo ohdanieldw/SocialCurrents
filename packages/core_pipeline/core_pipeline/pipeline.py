@@ -5,6 +5,7 @@ Main pipeline for processing audio files with all available features.
 import os
 import json
 import logging
+import time
 import traceback
 import numpy as np
 from pathlib import Path
@@ -41,6 +42,7 @@ class MultimodalPipeline:
         self.device = device
         self.keep_per_frame = bool(keep_per_frame)
         self.decimal_places = int(decimal_places)
+        self._tracker: list = []
 
         # Set up output directory
         if output_dir is None:
@@ -429,226 +431,41 @@ class MultimodalPipeline:
         """
         features = {}
 
-        # Extract basic audio features
-        if "basic_audio" in self.features:
-            print(f"Extracting basic audio features from {audio_path}")
-            extractor = self._get_extractor("basic_audio")
-            if extractor is not None:
-                try:
-                    basic_features = extractor.extract_all_features(audio_path)
-                    features.update(basic_features)
-                except Exception as e:
-                    logging.warning("basic_audio failed, skipping: %s", e)
-            else:
-                logging.warning("Skipping basic_audio (extractor unavailable)")
+        def _run(name, call_fn):
+            """Run an extractor with timing and tracking."""
+            if name not in self.features:
+                return
+            _t0 = time.perf_counter()
+            extractor = self._get_extractor(name)
+            if extractor is None:
+                self._tracker.append({"name": name, "status": "skipped", "n_features": 0, "reason": "missing dependency", "time": 0})
+                logging.warning("Skipping %s (extractor unavailable)", name)
+                return
+            try:
+                result = call_fn(extractor)
+                self._tracker.append({"name": name, "status": "succeeded", "n_features": len(result), "reason": "", "time": time.perf_counter() - _t0})
+                features.update(result)
+            except Exception as e:
+                self._tracker.append({"name": name, "status": "failed", "n_features": 0, "reason": str(e), "time": time.perf_counter() - _t0})
+                logging.warning("%s failed, skipping: %s", name, e)
 
-        # Extract librosa spectral features
-        if "librosa_spectral" in self.features:
-            print(f"Extracting librosa spectral features from {audio_path}")
-            extractor = self._get_extractor("librosa_spectral")
-            if extractor is not None:
-                try:
-                    spectral_features = extractor.extract_all_features(audio_path)
-                    features.update(spectral_features)
-                except Exception as e:
-                    logging.warning("librosa_spectral failed, skipping: %s", e)
-            else:
-                logging.warning("Skipping librosa_spectral (extractor unavailable)")
-
-        # Extract OpenSMILE features
-        if "opensmile" in self.features:
-            print(f"Extracting OpenSMILE features from {audio_path}")
-            extractor = self._get_extractor("opensmile")
-            if extractor is not None:
-                try:
-                    opensmile_features = extractor.get_feature_dict(audio_path)
-                    features.update(opensmile_features)
-                except Exception as e:
-                    logging.warning("opensmile failed, skipping: %s", e)
-            else:
-                logging.warning("Skipping opensmile (extractor unavailable)")
-
-        # Extract AudioStretchy features
-        if "audiostretchy" in self.features:
-            print(f"Extracting AudioStretchy time-stretching features from {audio_path}")
-            extractor = self._get_extractor("audiostretchy")
-            if extractor is not None:
-                try:
-                    audiostretchy_features = extractor.get_feature_dict(audio_path)
-                    features.update(audiostretchy_features)
-                except Exception as e:
-                    logging.warning("audiostretchy failed, skipping: %s", e)
-            else:
-                logging.warning("Skipping audiostretchy (extractor unavailable)")
-
-        # Extract speech emotion features
-        if "speech_emotion" in self.features:
-            print(f"Extracting speech emotion features from {audio_path}")
-            extractor = self._get_extractor("speech_emotion")
-            if extractor is not None:
-                try:
-                    emotion_features = extractor.predict(audio_path)
-                    features.update(emotion_features)
-                except Exception as e:
-                    logging.warning("speech_emotion failed, skipping: %s", e)
-            else:
-                logging.warning("Skipping speech_emotion (extractor unavailable)")
-
-        # Extract Heinsen routing sentiment features
-        if "heinsen_sentiment" in self.features:
-            print(f"Extracting Heinsen routing sentiment features from {audio_path}")
-            extractor = self._get_extractor("heinsen_sentiment")
-            if extractor is not None:
-                try:
-                    sentiment_features = extractor.get_feature_dict(features)
-                    features.update(sentiment_features)
-                except Exception as e:
-                    logging.warning("heinsen_sentiment failed, skipping: %s", e)
-            else:
-                logging.warning("Skipping heinsen_sentiment (extractor unavailable)")
-
-        # Extract speech separation features
-        if "speech_separation" in self.features:
-            print(f"Extracting speech separation features from {audio_path}")
-            extractor = self._get_extractor("speech_separation")
-            if extractor is not None:
-                try:
-                    separation_features = extractor.get_feature_dict(audio_path, None)
-                    features.update(separation_features)
-                except Exception as e:
-                    logging.warning("speech_separation failed, skipping: %s", e)
-            else:
-                logging.warning("Skipping speech_separation (extractor unavailable)")
-
-        # Extract WhisperX features
-        if "whisperx_transcription" in self.features:
-            print(f"Extracting WhisperX transcription features from {audio_path}")
-            extractor = self._get_extractor("whisperx_transcription")
-            if extractor is not None:
-                try:
-                    whisperx_features = extractor.get_feature_dict(audio_path, max_speakers=3)
-                    features.update(whisperx_features)
-                except Exception as e:
-                    logging.warning("whisperx_transcription failed, skipping: %s", e)
-            else:
-                logging.warning("Skipping whisperx_transcription (extractor unavailable)")
-
-        # Extract XLSR speech-to-text features
-        if "xlsr_speech_to_text" in self.features:
-            print(f"Extracting XLSR speech-to-text features from {audio_path}")
-            extractor = self._get_extractor("xlsr_speech_to_text")
-            if extractor is not None:
-                try:
-                    xlsr_features = extractor.get_feature_dict(audio_path, features)
-                    features.update(xlsr_features)
-                except Exception as e:
-                    print(f"Warning: XLSR speech-to-text analysis failed: {e}")
-            else:
-                print("Warning: Skipping xlsr_speech_to_text (extractor unavailable)")
-
-        # Extract S2T speech-to-text features
-        if "s2t_speech_to_text" in self.features:
-            print(f"Extracting S2T speech-to-text features from {audio_path}")
-            extractor = self._get_extractor("s2t_speech_to_text")
-            if extractor is not None:
-                try:
-                    s2t_features = extractor.get_feature_dict(audio_path, features)
-                    features.update(s2t_features)
-                except Exception as e:
-                    print(f"Warning: S2T speech-to-text analysis failed: {e}")
-            else:
-                print("Warning: Skipping s2t_speech_to_text (extractor unavailable)")
-
-        # Extract MELD emotion features (after WhisperX to access transcription)
-        if "meld_emotion" in self.features:
-            print(f"Extracting MELD emotion recognition features from {audio_path}")
-            extractor = self._get_extractor("meld_emotion")
-            if extractor is not None:
-                try:
-                    meld_features = extractor.get_feature_dict(features)
-                    features.update(meld_features)
-                except Exception as e:
-                    print(f"Warning: MELD emotion analysis failed: {e}")
-            else:
-                print("Warning: Skipping meld_emotion (extractor unavailable)")
-
-        # Extract DeBERTa text analysis features
-        if "deberta_text" in self.features:
-            print(f"Extracting DeBERTa text analysis features from {audio_path}")
-            extractor = self._get_extractor("deberta_text")
-            if extractor is not None:
-                try:
-                    deberta_features = extractor.get_feature_dict(features)
-                    features.update(deberta_features)
-                except Exception as e:
-                    print(f"Warning: DeBERTa text analysis failed: {e}")
-            else:
-                print("Warning: Skipping deberta_text (extractor unavailable)")
-
-        # Extract SimCSE text analysis features
-        if "simcse_text" in self.features:
-            print(f"Extracting SimCSE text analysis features from {audio_path}")
-            extractor = self._get_extractor("simcse_text")
-            if extractor is not None:
-                try:
-                    simcse_features = extractor.get_feature_dict(features)
-                    features.update(simcse_features)
-                except Exception as e:
-                    print(f"Warning: SimCSE text analysis failed: {e}")
-            else:
-                print("Warning: Skipping simcse_text (extractor unavailable)")
-
-        # Extract ALBERT text analysis features
-        if "albert_text" in self.features:
-            print(f"Extracting ALBERT text analysis features from {audio_path}")
-            extractor = self._get_extractor("albert_text")
-            if extractor is not None:
-                try:
-                    albert_features = extractor.get_feature_dict(features)
-                    features.update(albert_features)
-                except Exception as e:
-                    print(f"Warning: ALBERT text analysis failed: {e}")
-            else:
-                print("Warning: Skipping albert_text (extractor unavailable)")
-
-        # Extract Sentence-BERT text analysis features
-        if "sbert_text" in self.features:
-            print(f"Extracting Sentence-BERT text analysis features from {audio_path}")
-            extractor = self._get_extractor("sbert_text")
-            if extractor is not None:
-                try:
-                    sbert_features = extractor.get_feature_dict(features)
-                    features.update(sbert_features)
-                except Exception as e:
-                    print(f"Warning: Sentence-BERT text analysis failed: {e}")
-            else:
-                print("Warning: Skipping sbert_text (extractor unavailable)")
-
-        # Extract Universal Sentence Encoder text analysis features
-        if "use_text" in self.features:
-            print(f"Extracting Universal Sentence Encoder text analysis features from {audio_path}")
-            extractor = self._get_extractor("use_text")
-            if extractor is not None:
-                try:
-                    use_features = extractor.get_feature_dict(features)
-                    features.update(use_features)
-                except Exception as e:
-                    print(f"Warning: USE text analysis failed: {e}")
-            else:
-                print("Warning: Skipping use_text (extractor unavailable)")
-
-        # Extract ELMo contextual embeddings
-        if "elmo_text" in self.features:
-            print(f"Extracting ELMo contextual embeddings from {audio_path}")
-            extractor = self._get_extractor("elmo_text")
-            if extractor is not None:
-                try:
-                    elmo_features = extractor.get_feature_dict(features)
-                    features.update(elmo_features)
-                except Exception as e:
-                    print(f"Warning: ELMo text analysis failed: {e}")
-            else:
-                print("Warning: Skipping elmo_text (extractor unavailable)")
+        _run("basic_audio", lambda ext: ext.extract_all_features(audio_path))
+        _run("librosa_spectral", lambda ext: ext.extract_all_features(audio_path))
+        _run("opensmile", lambda ext: ext.get_feature_dict(audio_path))
+        _run("audiostretchy", lambda ext: ext.get_feature_dict(audio_path))
+        _run("speech_emotion", lambda ext: ext.predict(audio_path))
+        _run("heinsen_sentiment", lambda ext: ext.get_feature_dict(features))
+        _run("speech_separation", lambda ext: ext.get_feature_dict(audio_path, None))
+        _run("whisperx_transcription", lambda ext: ext.get_feature_dict(audio_path, max_speakers=3))
+        _run("xlsr_speech_to_text", lambda ext: ext.get_feature_dict(audio_path, features))
+        _run("s2t_speech_to_text", lambda ext: ext.get_feature_dict(audio_path, features))
+        _run("meld_emotion", lambda ext: ext.get_feature_dict(features))
+        _run("deberta_text", lambda ext: ext.get_feature_dict(features))
+        _run("simcse_text", lambda ext: ext.get_feature_dict(features))
+        _run("albert_text", lambda ext: ext.get_feature_dict(features))
+        _run("sbert_text", lambda ext: ext.get_feature_dict(features))
+        _run("use_text", lambda ext: ext.get_feature_dict(features))
+        _run("elmo_text", lambda ext: ext.get_feature_dict(features))
 
         return features
 
@@ -810,11 +627,12 @@ class MultimodalPipeline:
             if vf not in self.features:
                 continue
 
-            print(f"Extracting {vf} features from {video_path}")
+            _t0 = time.perf_counter()
             extractor = self._get_extractor(vf)
 
             if extractor is None:
-                print(f"Warning: extractor for {vf} not available (possibly missing dependency)")
+                self._tracker.append({"name": vf, "status": "skipped", "n_features": 0, "reason": "missing dependency", "time": 0})
+                logging.warning("Skipping %s (extractor unavailable)", vf)
                 continue
 
             try:
@@ -861,10 +679,12 @@ class MultimodalPipeline:
                         pass
 
                 flat = self._flatten_feature_output(raw)
+                self._tracker.append({"name": vf, "status": "succeeded", "n_features": len(flat), "reason": "", "time": time.perf_counter() - _t0})
                 features.update(flat)
 
             except Exception as e:
-                print(f"Error extracting {vf}: {e}")
+                self._tracker.append({"name": vf, "status": "failed", "n_features": 0, "reason": str(e), "time": time.perf_counter() - _t0})
+                logging.warning("%s failed, skipping: %s", vf, e)
 
         return features
 
@@ -927,7 +747,10 @@ class MultimodalPipeline:
 
     def process_files(self, files: List[Path], is_video: bool = True) -> Dict[str, Dict[str, Any]]:
         """Process a list of file paths, saving outputs to per-subject subfolders."""
+        _run_ts = datetime.now().strftime("%Y%m%d_%H%M%S")
         results = {}
+        all_trackers: list = []
+
         for file_path in files:
             file_path = Path(file_path)
             stem = file_path.stem  # e.g. "dyad002_sub003"
@@ -940,9 +763,17 @@ class MultimodalPipeline:
                 video_out_dir = self.output_dir / stem
 
             video_out_dir.mkdir(parents=True, exist_ok=True)
-            _log_handler = logging.FileHandler(video_out_dir / f"{file_prefix}.log")
-            _log_handler.setFormatter(logging.Formatter("%(asctime)s - %(levelname)s - %(message)s"))
-            logging.getLogger().addHandler(_log_handler)
+            self._tracker = []
+            _file_t0 = time.perf_counter()
+
+            # Two log handlers: timestamped (archival) + plain (latest)
+            _fmt = logging.Formatter("%(asctime)s - %(levelname)s - %(message)s")
+            _log_ts = logging.FileHandler(video_out_dir / f"{file_prefix}_{_run_ts}.log")
+            _log_ts.setFormatter(_fmt)
+            _log_plain = logging.FileHandler(video_out_dir / f"{file_prefix}.log", mode="w")
+            _log_plain.setFormatter(_fmt)
+            logging.getLogger().addHandler(_log_ts)
+            logging.getLogger().addHandler(_log_plain)
             try:
                 if is_video:
                     features = self.process_video_file(file_path)
@@ -954,10 +785,104 @@ class MultimodalPipeline:
             except Exception as e:
                 print(f"Error processing {file_path}: {e}")
             finally:
-                logging.getLogger().removeHandler(_log_handler)
-                _log_handler.close()
+                _file_elapsed = time.perf_counter() - _file_t0
+                logging.getLogger().removeHandler(_log_ts)
+                logging.getLogger().removeHandler(_log_plain)
+                _log_ts.close()
+                _log_plain.close()
 
+            # Generate and save run summary
+            summary = self._build_run_summary(file_prefix, file_path.name, self._tracker, video_out_dir, _file_elapsed)
+            (video_out_dir / f"{file_prefix}_run_summary_{_run_ts}.txt").write_text(summary)
+            self._print_terminal_summary(file_prefix, self._tracker, video_out_dir, _file_elapsed)
+            all_trackers.append((file_prefix, self._tracker, _file_elapsed))
+
+        self._print_batch_summary(all_trackers)
         return results
+
+    @staticmethod
+    def _format_time(seconds: float) -> str:
+        if seconds < 60:
+            return f"{seconds:.1f}s"
+        m, s = divmod(int(seconds), 60)
+        if m < 60:
+            return f"{m}m{s:02d}s"
+        h, m = divmod(m, 60)
+        return f"{h}h{m:02d}m"
+
+    def _build_run_summary(self, file_prefix: str, input_name: str, tracker: list, out_dir: Path, total_time: float) -> str:
+        lines = [
+            f"SocialCurrents v0.1.1 — Run Summary",
+            f"Input: {input_name}",
+            f"Total time: {self._format_time(total_time)}",
+            "",
+        ]
+        succeeded = [t for t in tracker if t["status"] == "succeeded"]
+        skipped = [t for t in tracker if t["status"] == "skipped"]
+        failed = [t for t in tracker if t["status"] == "failed"]
+
+        if succeeded:
+            lines.append("SUCCEEDED:")
+            for t in succeeded:
+                lines.append(f"  {t['name']:<30s} {t['n_features']:>4d} features  {self._format_time(t['time']):>8s}")
+        if skipped:
+            lines.append("\nSKIPPED:")
+            for t in skipped:
+                lines.append(f"  {t['name']:<30s} ({t['reason']})")
+        if failed:
+            lines.append("\nFAILED:")
+            for t in failed:
+                lines.append(f"  {t['name']:<30s} {self._format_time(t['time']):>8s}  {t['reason']}")
+
+        # Output files
+        lines.append("\nOutput files:")
+        total_size = 0
+        for p in sorted(out_dir.iterdir()):
+            if p.is_file():
+                sz = p.stat().st_size
+                total_size += sz
+                lines.append(f"  {p.name}  ({sz / 1024:.1f} KB)")
+        lines.append(f"  Total: {total_size / (1024 * 1024):.1f} MB")
+        return "\n".join(lines) + "\n"
+
+    def _print_terminal_summary(self, file_prefix: str, tracker: list, out_dir: Path, total_time: float) -> None:
+        w = 45
+        print(f"\n── {file_prefix} " + "─" * max(0, w - len(file_prefix) - 4))
+        for t in tracker:
+            if t["status"] == "succeeded":
+                print(f"  ✓ {t['name']:<24s} {t['n_features']:>4d} features  {self._format_time(t['time']):>8s}")
+            elif t["status"] == "skipped":
+                print(f"  ✗ {t['name']:<24s}    — skipped   ({t['reason']})")
+            else:
+                print(f"  ✗ {t['name']:<24s}    — FAILED    ({t['reason'][:40]})")
+        # Output file count and total size
+        out_files = [p for p in out_dir.iterdir() if p.is_file()]
+        total_mb = sum(p.stat().st_size for p in out_files) / (1024 * 1024)
+        print(f"\n  Output: {len(out_files)} files, {total_mb:.1f} MB")
+        print(f"  Time:   {self._format_time(total_time)}")
+        print("─" * w)
+
+    def _print_batch_summary(self, all_trackers: list) -> None:
+        if len(all_trackers) <= 1:
+            return
+        n_files = len(all_trackers)
+        total_time = sum(t[2] for t in all_trackers)
+        # Count per-extractor failures across files
+        fail_counts: Dict[str, int] = {}
+        for _, tracker, _ in all_trackers:
+            for t in tracker:
+                if t["status"] in ("failed", "skipped"):
+                    fail_counts[t["name"]] = fail_counts.get(t["name"], 0) + 1
+
+        print(f"\n{'═' * 45}")
+        print(f"  Batch Summary")
+        print(f"  Files processed: {n_files}")
+        print(f"  Total time:      {self._format_time(total_time)}")
+        if fail_counts:
+            print(f"  Extractors skipped/failed across files:")
+            for name, count in sorted(fail_counts.items()):
+                print(f"    {name:<30s} ({count}/{n_files} files)")
+        print(f"{'═' * 45}")
 
     def _save_file_outputs(self, file_prefix: str, file_features: Dict[str, Any], out_dir: Path) -> None:
         """Save {prefix}_summary_features.json, _summary_features.csv, and _timeseries_features.csv for one video."""
