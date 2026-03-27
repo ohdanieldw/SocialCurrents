@@ -129,7 +129,8 @@ python run_pipeline.py -i data/ -o output/
 
 ```
 usage: python run_pipeline.py [-h] [-i INPUT] [-o OUTPUT_DIR] [-f FEATURES]
-                              [--list-features] [--skip-slow] [--is-audio]
+                              [--list-features] [--skip-slow] [--overwrite]
+                              [--normalize-fps] [--is-audio]
                               [--log-file LOG_FILE] [--decimal-places N]
                               [--check-dependencies]
 ```
@@ -142,6 +143,8 @@ usage: python run_pipeline.py [-h] [-i INPUT] [-o OUTPUT_DIR] [-f FEATURES]
 | `--list-features` | — | Print all available feature names grouped by category, then exit |
 | `--is-audio` | `False` | Treat input files as audio (`.wav`/`.mp3`/`.flac`) instead of video |
 | `--log-file` | *(none)* | Optional path for a run-level log file; per-subject logs are written automatically to each subject's output folder |
+| `--overwrite` | `False` | Reprocess files even if output already exists |
+| `--normalize-fps` | `False` | Re-encode input videos to constant 25 fps via ffmpeg before processing |
 | `--check-dependencies` | — | Check whether required Python packages are installed, then exit |
 
 ### Supported input formats

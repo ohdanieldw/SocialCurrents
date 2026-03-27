@@ -328,6 +328,7 @@ def main() -> None:
         action="store_true",
         help=f"Skip CPU-prohibitive extractors ({', '.join(SLOW_FEATURES)}); has no effect when -f is used",
     )
+    parser.add_argument("--overwrite", action="store_true", help="Reprocess files even if output already exists")
     parser.add_argument("--is-audio", action="store_true", help="Process files as audio instead of video")
     parser.add_argument(
         "--normalize-fps",
@@ -400,7 +401,7 @@ def main() -> None:
         sys.exit(1)
 
     try:
-        pipeline = MultimodalPipeline(output_dir=output_dir, features=features, device="cpu", decimal_places=args.decimal_places)
+        pipeline = MultimodalPipeline(output_dir=output_dir, features=features, device="cpu", decimal_places=args.decimal_places, overwrite=args.overwrite)
 
         try:
             import torch  # type: ignore[import]

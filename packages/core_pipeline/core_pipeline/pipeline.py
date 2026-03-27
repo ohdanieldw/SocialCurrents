@@ -29,6 +29,7 @@ class MultimodalPipeline:
         device: str = "cpu",
         keep_per_frame: bool = False,
         decimal_places: int = 3,
+        overwrite: bool = False,
     ):
         """
         Initialize the multimodal pipeline.
@@ -42,6 +43,7 @@ class MultimodalPipeline:
         self.device = device
         self.keep_per_frame = bool(keep_per_frame)
         self.decimal_places = int(decimal_places)
+        self.overwrite = bool(overwrite)
         self._tracker: list = []
 
         # Set up output directory
@@ -774,6 +776,13 @@ class MultimodalPipeline:
                 video_out_dir = self.output_dir / stem
 
             video_out_dir.mkdir(parents=True, exist_ok=True)
+
+            # Skip if output already exists (unless --overwrite)
+            if not self.overwrite and list(video_out_dir.glob("*_summary_features.csv")):
+                print(f"  ⏭ Skipping {file_prefix} (output exists, use --overwrite to rerun)")
+                all_trackers.append((file_prefix, [], 0, True))
+                continue
+
             self._tracker = []
             _file_t0 = time.perf_counter()
 
@@ -810,7 +819,7 @@ class MultimodalPipeline:
             summary = self._build_run_summary(file_prefix, file_path.name, self._tracker, video_out_dir, _file_elapsed)
             (video_out_dir / f"{file_prefix}_run_summary_{_run_ts}.txt").write_text(summary)
             self._print_terminal_summary(file_prefix, self._tracker, video_out_dir, _file_elapsed)
-            all_trackers.append((file_prefix, self._tracker, _file_elapsed))
+            all_trackers.append((file_prefix, self._tracker, _file_elapsed, False))
 
         self._print_batch_summary(all_trackers)
         return results
@@ -885,13 +894,18 @@ class MultimodalPipeline:
         print(f"  -> Output: {rel_dir}/ ({len(out_files)} files, {total_mb:.1f} MB)")
 
     def _print_batch_summary(self, all_trackers: list) -> None:
-        n_files = len(all_trackers)
+        n_total = len(all_trackers)
+        n_skipped_files = sum(1 for t in all_trackers if len(t) > 3 and t[3])
+        n_processed = n_total - n_skipped_files
         total_time = sum(t[2] for t in all_trackers)
 
-        # Collect per-extractor status across files
+        # Collect per-extractor status across processed files
         ok_names: set = set()
         fail_counts: Dict[str, int] = {}
-        for _, tracker, _ in all_trackers:
+        for entry in all_trackers:
+            if len(entry) > 3 and entry[3]:
+                continue  # file-skipped
+            tracker = entry[1]
             for t in tracker:
                 if t["status"] == "succeeded":
                     ok_names.add(t["name"])
@@ -902,7 +916,10 @@ class MultimodalPipeline:
         print(f"\n{'═' * w}")
         print(f"  SocialCurrents — Run Complete")
         print(f"{'═' * w}")
-        print(f"  Files: {n_files}/{n_files} processed")
+        files_line = f"  Files: {n_processed}/{n_total} processed"
+        if n_skipped_files:
+            files_line += f", {n_skipped_files} skipped (output exists)"
+        print(files_line)
         print(f"  Time:  {self._format_time(total_time)}")
         if ok_names or fail_counts:
             print(f"\n  Extractors:")
@@ -911,7 +928,7 @@ class MultimodalPipeline:
                 print(f"    ✓ {names}")
             if fail_counts:
                 for name, count in sorted(fail_counts.items()):
-                    label = "skipped" if count == n_files else f"skipped in {count}/{n_files}"
+                    label = "skipped" if count == n_processed else f"skipped in {count}/{n_processed}"
                     print(f"    ✗ {name} ({label})")
         print(f"{'═' * w}")
 

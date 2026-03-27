@@ -93,6 +93,9 @@ bash run_macos.sh -i data/ -o output/ -f basic_audio,mediapipe_pose_vision,pyfea
 # Process a single video file
 bash run_macos.sh -i data/dyad002_sub003.MP4 -o output/
 
+# Reprocess files even if output already exists
+bash run_macos.sh -i data/ -o output/ --overwrite
+
 # Fix variable-frame-rate videos automatically (re-encodes to 25 fps)
 bash run_macos.sh -i data/ -o output/ --normalize-fps
 
