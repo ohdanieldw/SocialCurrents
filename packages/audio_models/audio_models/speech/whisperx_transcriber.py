@@ -78,14 +78,14 @@ class WhisperXTranscriber:
             try:
                 from whisperx.diarize import DiarizationPipeline  # type: ignore
                 self.diarization_model = DiarizationPipeline(
-                    use_auth_token=self.hf_token,
+                    token=self.hf_token,
                     device=self.device
                 )
             except ImportError:
                 # Fallback for older versions of WhisperX
                 try:
                     self.diarization_model = whisperx.DiarizationPipeline(
-                        use_auth_token=self.hf_token,
+                        token=self.hf_token,
                         device=self.device
                     )
                 except Exception as e:
