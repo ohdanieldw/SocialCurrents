@@ -432,21 +432,26 @@ class MultimodalPipeline:
         features = {}
 
         def _run(name, call_fn):
-            """Run an extractor with timing and tracking."""
+            """Run an extractor with timing, tracking, and live output."""
             if name not in self.features:
                 return
             _t0 = time.perf_counter()
             extractor = self._get_extractor(name)
             if extractor is None:
                 self._tracker.append({"name": name, "status": "skipped", "n_features": 0, "reason": "missing dependency", "time": 0})
+                self._print_extractor_line(name, "skipped", 0, 0, "missing dependency")
                 logging.warning("Skipping %s (extractor unavailable)", name)
                 return
             try:
                 result = call_fn(extractor)
-                self._tracker.append({"name": name, "status": "succeeded", "n_features": len(result), "reason": "", "time": time.perf_counter() - _t0})
+                _elapsed = time.perf_counter() - _t0
+                self._tracker.append({"name": name, "status": "succeeded", "n_features": len(result), "reason": "", "time": _elapsed})
+                self._print_extractor_line(name, "succeeded", len(result), _elapsed, "")
                 features.update(result)
             except Exception as e:
-                self._tracker.append({"name": name, "status": "failed", "n_features": 0, "reason": str(e), "time": time.perf_counter() - _t0})
+                _elapsed = time.perf_counter() - _t0
+                self._tracker.append({"name": name, "status": "failed", "n_features": 0, "reason": str(e), "time": _elapsed})
+                self._print_extractor_line(name, "failed", 0, _elapsed, str(e))
                 logging.warning("%s failed, skipping: %s", name, e)
 
         _run("basic_audio", lambda ext: ext.extract_all_features(audio_path))
@@ -632,6 +637,7 @@ class MultimodalPipeline:
 
             if extractor is None:
                 self._tracker.append({"name": vf, "status": "skipped", "n_features": 0, "reason": "missing dependency", "time": 0})
+                self._print_extractor_line(vf, "skipped", 0, 0, "missing dependency")
                 logging.warning("Skipping %s (extractor unavailable)", vf)
                 continue
 
@@ -679,11 +685,15 @@ class MultimodalPipeline:
                         pass
 
                 flat = self._flatten_feature_output(raw)
-                self._tracker.append({"name": vf, "status": "succeeded", "n_features": len(flat), "reason": "", "time": time.perf_counter() - _t0})
+                _elapsed = time.perf_counter() - _t0
+                self._tracker.append({"name": vf, "status": "succeeded", "n_features": len(flat), "reason": "", "time": _elapsed})
+                self._print_extractor_line(vf, "succeeded", len(flat), _elapsed, "")
                 features.update(flat)
 
             except Exception as e:
-                self._tracker.append({"name": vf, "status": "failed", "n_features": 0, "reason": str(e), "time": time.perf_counter() - _t0})
+                _elapsed = time.perf_counter() - _t0
+                self._tracker.append({"name": vf, "status": "failed", "n_features": 0, "reason": str(e), "time": _elapsed})
+                self._print_extractor_line(vf, "failed", 0, _elapsed, str(e))
                 logging.warning("%s failed, skipping: %s", vf, e)
 
         return features
@@ -750,8 +760,9 @@ class MultimodalPipeline:
         _run_ts = datetime.now().strftime("%Y%m%d_%H%M%S")
         results = {}
         all_trackers: list = []
+        n_files = len(files)
 
-        for file_path in files:
+        for _file_i, file_path in enumerate(files, 1):
             file_path = Path(file_path)
             stem = file_path.stem  # e.g. "dyad002_sub003"
             if "_" in stem:
@@ -765,6 +776,10 @@ class MultimodalPipeline:
             video_out_dir.mkdir(parents=True, exist_ok=True)
             self._tracker = []
             _file_t0 = time.perf_counter()
+
+            print(f"\n{'═' * 45}")
+            print(f"  Processing: {file_path.name} ({_file_i}/{n_files})")
+            print(f"{'═' * 45}")
 
             # Two log handlers: timestamped (archival) + plain (latest)
             _fmt = logging.Formatter("%(asctime)s - %(levelname)s - %(message)s")
@@ -799,6 +814,20 @@ class MultimodalPipeline:
 
         self._print_batch_summary(all_trackers)
         return results
+
+    @staticmethod
+    def _print_extractor_line(name: str, status: str, n_features: int, elapsed: float, reason: str) -> None:
+        """Print a single extractor result line with dotted leaders."""
+        ft = MultimodalPipeline._format_time(elapsed)
+        pad = max(1, 30 - len(name))
+        dots = "." * pad
+        if status == "succeeded":
+            print(f"  ✓ {name} {dots} {n_features:>4d} features  {ft:>8s}")
+        elif status == "skipped":
+            print(f"  ✗ {name} {dots} skipped ({reason})")
+        else:
+            short = reason[:40] if reason else "unknown error"
+            print(f"  ✗ {name} {dots} FAILED ({short})")
 
     @staticmethod
     def _format_time(seconds: float) -> str:
@@ -846,43 +875,45 @@ class MultimodalPipeline:
         return "\n".join(lines) + "\n"
 
     def _print_terminal_summary(self, file_prefix: str, tracker: list, out_dir: Path, total_time: float) -> None:
-        w = 45
-        print(f"\n── {file_prefix} " + "─" * max(0, w - len(file_prefix) - 4))
-        for t in tracker:
-            if t["status"] == "succeeded":
-                print(f"  ✓ {t['name']:<24s} {t['n_features']:>4d} features  {self._format_time(t['time']):>8s}")
-            elif t["status"] == "skipped":
-                print(f"  ✗ {t['name']:<24s}    — skipped   ({t['reason']})")
-            else:
-                print(f"  ✗ {t['name']:<24s}    — FAILED    ({t['reason'][:40]})")
-        # Output file count and total size
+        n_ok = sum(1 for t in tracker if t["status"] == "succeeded")
+        n_skip = sum(1 for t in tracker if t["status"] == "skipped")
+        n_fail = sum(1 for t in tracker if t["status"] == "failed")
         out_files = [p for p in out_dir.iterdir() if p.is_file()]
         total_mb = sum(p.stat().st_size for p in out_files) / (1024 * 1024)
-        print(f"\n  Output: {len(out_files)} files, {total_mb:.1f} MB")
-        print(f"  Time:   {self._format_time(total_time)}")
-        print("─" * w)
+        rel_dir = out_dir.relative_to(self.output_dir) if self.output_dir in out_dir.parents else out_dir
+        print(f"\n  -> {n_ok} succeeded, {n_skip} skipped, {n_fail} failed | {self._format_time(total_time)}")
+        print(f"  -> Output: {rel_dir}/ ({len(out_files)} files, {total_mb:.1f} MB)")
 
     def _print_batch_summary(self, all_trackers: list) -> None:
-        if len(all_trackers) <= 1:
-            return
         n_files = len(all_trackers)
         total_time = sum(t[2] for t in all_trackers)
-        # Count per-extractor failures across files
+
+        # Collect per-extractor status across files
+        ok_names: set = set()
         fail_counts: Dict[str, int] = {}
         for _, tracker, _ in all_trackers:
             for t in tracker:
-                if t["status"] in ("failed", "skipped"):
+                if t["status"] == "succeeded":
+                    ok_names.add(t["name"])
+                elif t["status"] in ("failed", "skipped"):
                     fail_counts[t["name"]] = fail_counts.get(t["name"], 0) + 1
 
-        print(f"\n{'═' * 45}")
-        print(f"  Batch Summary")
-        print(f"  Files processed: {n_files}")
-        print(f"  Total time:      {self._format_time(total_time)}")
-        if fail_counts:
-            print(f"  Extractors skipped/failed across files:")
-            for name, count in sorted(fail_counts.items()):
-                print(f"    {name:<30s} ({count}/{n_files} files)")
-        print(f"{'═' * 45}")
+        w = 45
+        print(f"\n{'═' * w}")
+        print(f"  SocialCurrents — Run Complete")
+        print(f"{'═' * w}")
+        print(f"  Files: {n_files}/{n_files} processed")
+        print(f"  Time:  {self._format_time(total_time)}")
+        if ok_names or fail_counts:
+            print(f"\n  Extractors:")
+            if ok_names:
+                names = ", ".join(sorted(ok_names))
+                print(f"    ✓ {names}")
+            if fail_counts:
+                for name, count in sorted(fail_counts.items()):
+                    label = "skipped" if count == n_files else f"skipped in {count}/{n_files}"
+                    print(f"    ✗ {name} ({label})")
+        print(f"{'═' * w}")
 
     def _save_file_outputs(self, file_prefix: str, file_features: Dict[str, Any], out_dir: Path) -> None:
         """Save {prefix}_summary_features.json, _summary_features.csv, and _timeseries_features.csv for one video."""
