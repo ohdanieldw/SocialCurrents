@@ -189,6 +189,10 @@ See [MANUAL.md](MANUAL.md) for the full feature reference and output format deta
 
 See [CHANGELOG.md](CHANGELOG.md) for version history.
 
+## Funding
+
+Development of SocialCurrents was supported by a Seed Fund Grant from the Centre for Social Sciences and Humanities (CSSH), National University of Singapore, awarded to Daniel DongWon Oh.
+
 ## Citation
 
 If you use SocialCurrents in published research, please cite:
