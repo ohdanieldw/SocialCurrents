@@ -2,13 +2,9 @@
 
 ![Version](https://img.shields.io/badge/version-0.1.0-blue)
 
+Extract 400+ behavioral features from video recordings automatically.
+
 SocialCurrents is a multimodal feature extraction pipeline for social and behavioral research. Given a folder of video recordings (e.g., dyadic interactions, interviews, group conversations), it produces time-stamped, analysis-ready feature files covering body movement, facial expression, speech, and language — with no manual annotation required.
-
-## Documentation
-
-See [MANUAL.md](MANUAL.md) for the full feature reference and output format details.
-
-See [CHANGELOG.md](CHANGELOG.md) for version history.
 
 ## What it measures
 
@@ -70,6 +66,15 @@ bash setup_macos.sh
 ```
 
 Setup takes 5–15 minutes on first run. It creates a conda environment called `pipeline-env` and installs all Python packages automatically.
+
+## Quick start
+
+```bash
+git clone https://github.com/ohdanieldw/socialcurrents.git
+cd socialcurrents
+bash setup_macos.sh
+bash run_macos.sh -i data/dyad002_sub003.MP4 -o output/
+```
 
 ## Usage
 
@@ -172,6 +177,12 @@ bash run_macos.sh -i data/ -o output/
 | `rife_vision` | Video | — |
 
 Run `bash run_macos.sh --list-features` for descriptions of each extractor.
+
+## Documentation
+
+See [MANUAL.md](MANUAL.md) for the full feature reference and output format details.
+
+See [CHANGELOG.md](CHANGELOG.md) for version history.
 
 ## Citation
 
