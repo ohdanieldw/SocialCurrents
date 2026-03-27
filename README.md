@@ -54,6 +54,8 @@ The time-series CSV is the primary file for most behavioral analyses (e.g., time
 - ~15 GB disk space for models and dependencies
 - A free [HuggingFace](https://huggingface.co) account and token for speaker diarization (WhisperX)
 
+**Note on Apple Silicon:** WhisperX transcription (and dependent NLP extractors) currently requires native x86 or GPU hardware. On Apple Silicon Macs running x86 conda environments under Rosetta, the transcription step will crash. Audio and vision extractors work normally. Full pipeline functionality including transcription is available on Linux servers or GPU-equipped machines.
+
 ## Installation
 
 ```bash

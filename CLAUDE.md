@@ -35,6 +35,9 @@ Pre-process with ffmpeg to convert to constant frame rate before running the pip
 ffmpeg -i input.MP4 -vsync cfr -r 25 output.MP4
 ```
 
+### WhisperX on Apple Silicon
+WhisperX transcription segfaults on Apple Silicon Macs when the conda environment runs x86 Python under Rosetta. ctranslate2 requires native ARM or proper x86 hardware. Transcription features (whisperx, sbert_text, deberta_text) must be run on an x86 Linux machine or GPU server until the conda environment is recreated as ARM-native.
+
 ### WhisperX setup
 WhisperX speaker diarization requires:
 - `pyannote.audio` installed
