@@ -1,6 +1,6 @@
 """Text and emotion analyzers for the multimodal pipeline."""
 
-__version__ = "0.1.0"
+__version__ = "0.1.1"
 
 from .text import (
     ALBERTAnalyzer,

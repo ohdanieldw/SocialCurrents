@@ -1,6 +1,6 @@
 """Computer vision analyzers for the multimodal pipeline."""
 
-__version__ = "0.1.0"
+__version__ = "0.1.1"
 
 from .vision import (
     ARBExAnalyzer,

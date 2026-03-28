@@ -1,6 +1,6 @@
 """Core multimodal pipeline package."""
 
-__version__ = "0.1.0"
+__version__ = "0.1.1"
 
 from .pipeline import MultimodalPipeline
 from .feature_extractor import MultimodalFeatureExtractor

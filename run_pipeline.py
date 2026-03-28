@@ -368,7 +368,13 @@ def main() -> None:
         default="mtcnn",
         help="Face detection model for Py-Feat: mtcnn, retinaface, img2pose (default: mtcnn)",
     )
-    parser.add_argument("--version", action="version", version="SocialCurrents 0.1.2")
+    parser.add_argument(
+        "--pyfeat-au-model",
+        default="svm",
+        choices=["svm", "xgb"],
+        help="Action unit model for Py-Feat: svm (fast, default) or xgb (may hang on some systems)",
+    )
+    parser.add_argument("--version", action="version", version="SocialCurrents 0.1.1")
     args = parser.parse_args()
 
     if any(a in sys.argv for a in ("-d", "--data-dir")):
@@ -431,6 +437,7 @@ def main() -> None:
             pyfeat_sample_rate=args.pyfeat_sample_rate,
             pyfeat_batch_timeout=args.pyfeat_batch_timeout,
             pyfeat_face_model=args.pyfeat_face_model,
+            pyfeat_au_model=args.pyfeat_au_model,
         )
 
         try:

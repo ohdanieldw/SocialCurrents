@@ -33,6 +33,7 @@ class MultimodalPipeline:
         pyfeat_sample_rate: int = 5,
         pyfeat_batch_timeout: float = 30,
         pyfeat_face_model: str = 'mtcnn',
+        pyfeat_au_model: str = 'svm',
     ):
         """
         Initialize the multimodal pipeline.
@@ -52,6 +53,7 @@ class MultimodalPipeline:
         self.pyfeat_sample_rate = int(pyfeat_sample_rate)
         self.pyfeat_batch_timeout = float(pyfeat_batch_timeout)
         self.pyfeat_face_model = str(pyfeat_face_model)
+        self.pyfeat_au_model = str(pyfeat_au_model)
         self._tracker: list = []
 
         # Set up output directory
@@ -308,6 +310,7 @@ class MultimodalPipeline:
                         sample_rate=self.pyfeat_sample_rate,
                         batch_timeout=self.pyfeat_batch_timeout,
                         face_model=self.pyfeat_face_model,
+                        au_model=self.pyfeat_au_model,
                     )
                 except Exception as e:
                     print(f"Warning: pyfeat_vision unavailable: {e}")

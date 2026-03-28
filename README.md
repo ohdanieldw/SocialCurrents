@@ -1,6 +1,6 @@
 # SocialCurrents
 
-![Version](https://img.shields.io/badge/version-0.1.2-blue)
+![Version](https://img.shields.io/badge/version-0.1.1-blue)
 
 Extract 400+ behavioral features from video recordings automatically.
 
@@ -287,7 +287,7 @@ Development of SocialCurrents was supported by a Seed Fund Grant from the Centre
 
 If you use SocialCurrents in published research, please cite:
 
-> Oh, D. D. (2026). *SocialCurrents: A multimodal feature extraction pipeline for social and behavioral research* (Version 0.1.2) [Software]. GitHub. https://github.com/ohdanieldw/socialcurrents
+> Oh, D. D. (2026). *SocialCurrents: A multimodal feature extraction pipeline for social and behavioral research* (Version 0.1.1) [Software]. GitHub. https://github.com/ohdanieldw/socialcurrents
 
 ## Acknowledgments
 

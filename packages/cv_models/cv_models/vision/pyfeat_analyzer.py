@@ -67,24 +67,104 @@ REQUIRED_FEATURES = (
 )
 
 
-def _run_detect_images(image_paths: List[str], face_model: str = 'mtcnn') -> Optional[List[Dict[str, Any]]]:
-    """Run Py-Feat detect_images in a subprocess-safe function.
+def _select_central_face(df, frame_width: int) -> 'pd.DataFrame':
+    """When multiple faces are detected per image, keep only the most central one.
+
+    Groups rows by the ``input`` column (one group per source image).  For
+    groups with a single face the row is kept as-is.  For groups with
+    multiple faces the face whose horizontal center is closest to the
+    frame's horizontal center is selected.
+    """
+    if 'input' not in df.columns or len(df) <= 1:
+        return df
+
+    frame_cx = frame_width / 2.0
+    kept: List[int] = []
+
+    for _input_val, group in df.groupby('input', sort=False):
+        if len(group) == 1:
+            kept.append(group.index[0])
+            continue
+
+        # Compute face center-x for each detected face
+        rect_x_col = 'FaceRectX' if 'FaceRectX' in group.columns else 'face_x'
+        rect_w_col = 'FaceRectWidth' if 'FaceRectWidth' in group.columns else 'face_w'
+        if rect_x_col not in group.columns or rect_w_col not in group.columns:
+            # Can't determine position — keep first face
+            kept.append(group.index[0])
+            continue
+
+        face_cx = pd.to_numeric(group[rect_x_col], errors='coerce') + \
+                  pd.to_numeric(group[rect_w_col], errors='coerce') / 2.0
+        best_idx = (face_cx - frame_cx).abs().idxmin()
+        kept.append(best_idx)
+        logging.debug(
+            "Py-Feat: %d faces detected in %s, selected face closest to center (idx %s)",
+            len(group), _input_val, best_idx,
+        )
+
+    return df.loc[kept].reset_index(drop=True)
+
+
+def _run_detect_images(image_paths: List[str], face_model: str = 'mtcnn',
+                       au_model: str = 'svm') -> Optional[List[Dict[str, Any]]]:
+    """Run Py-Feat detection in a subprocess-safe function.
 
     Builds its own Detector, suppresses noisy logging, and returns
     the result as a list of row-dicts so it can cross process boundaries.
-    Returns None on any error.
+    Returns None only if every image fails.
     """
     try:
-        # Suppress noisy library output in the subprocess
+        import warnings as _w
+        _w.filterwarnings("ignore", category=FutureWarning, module="timm")
+        _w.filterwarnings("ignore", category=UserWarning, module="sklearn")
         logging.getLogger('feat').setLevel(logging.ERROR)
 
-        from feat import Detector  # noqa: F811
-        detector = Detector(device='cpu', face_model=face_model)
+        # scipy compat patch needed inside subprocess
+        try:
+            import sys as _sys
+            _sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+            from cv_models.utils.scipy_compat import ensure_legacy_stats
+            ensure_legacy_stats()
+        except Exception:
+            pass
 
+        from feat import Detector  # noqa: F811
+        detector = Detector(
+            device='cpu',
+            face_model=face_model,
+            landmark_model='mobilefacenet',
+            au_model=au_model,
+            emotion_model='resmasknet',
+            facepose_model='img2pose',
+            face_detection_threshold=0.15,
+        )
+
+        # Determine frame width for multi-face selection
+        frame_width = 1280  # fallback
+        try:
+            img = cv2.imread(image_paths[0])
+            if img is not None:
+                frame_width = img.shape[1]
+        except Exception:
+            pass
+
+        # detect_images (plural) may not exist in all py-feat versions
         try:
             result = detector.detect_images(image_paths)
-        except AttributeError:
-            result = [detector.detect_image(p) for p in image_paths]
+        except (AttributeError, TypeError):
+            # Fall back to per-image detection
+            results_list = []
+            for p in image_paths:
+                try:
+                    r = detector.detect_image(p)
+                    results_list.append(r)
+                except Exception as e:
+                    logging.warning("Py-Feat: detect_image failed on %s: %s", p, e)
+            result = results_list if results_list else None
+
+        if result is None:
+            return None
 
         # Serialise to list-of-dicts so it can be returned through the Pool
         if isinstance(result, list):
@@ -92,6 +172,7 @@ def _run_detect_images(image_paths: List[str], face_model: str = 'mtcnn') -> Opt
             for single in result:
                 df = single.to_pandas() if hasattr(single, 'to_pandas') else single
                 if df is not None and len(df) > 0:
+                    df = _select_central_face(df, frame_width)
                     rows.append(df.to_dict(orient='records'))
                 else:
                     rows.append([])
@@ -99,9 +180,11 @@ def _run_detect_images(image_paths: List[str], face_model: str = 'mtcnn') -> Opt
 
         df = result.to_pandas() if hasattr(result, 'to_pandas') else result
         if df is not None and len(df) > 0:
+            df = _select_central_face(df, frame_width)
             return [df.to_dict(orient='records')]
         return None
-    except Exception:
+    except Exception as e:
+        logging.warning("Py-Feat subprocess error: %s", e)
         return None
 
 
@@ -110,11 +193,13 @@ class PyFeatAnalyzer:
     BATCH_SIZE = 12
     MAX_FRAME_EDGE = 1280
 
-    def __init__(self, device: str = 'cpu', sample_rate: int = 5, batch_timeout: float = 30, face_model: str = 'mtcnn'):
+    def __init__(self, device: str = 'cpu', sample_rate: int = 5, batch_timeout: float = 30,
+                 face_model: str = 'mtcnn', au_model: str = 'svm'):
         self.device = device
         self.sample_rate = max(1, int(sample_rate))
         self.batch_timeout = float(batch_timeout) if batch_timeout else None
         self.face_model = face_model
+        self.au_model = au_model
         self._init_error: Optional[str] = None
         ensure_legacy_stats()
         self._ensure_lib2to3()
@@ -151,7 +236,15 @@ class PyFeatAnalyzer:
             try:
                 from feat import Detector  # type: ignore
                 # Lower the face detection threshold to improve sensitivity on small/low-contrast faces
-                detector = Detector(device=self.device, face_model=self.face_model, face_detection_threshold=0.15)
+                detector = Detector(
+                    device=self.device,
+                    face_model=self.face_model,
+                    landmark_model='mobilefacenet',
+                    au_model=self.au_model,
+                    emotion_model='resmasknet',
+                    facepose_model='img2pose',
+                    face_detection_threshold=0.15,
+                )
                 self._init_error = None
             finally:
                 # Restore original method even if Detector() fails
@@ -504,7 +597,7 @@ class PyFeatAnalyzer:
                     # detect_images() can block in C/PyTorch code that ignores signals.
                     pool = multiprocessing.Pool(1)
                     try:
-                        async_result = pool.apply_async(_run_detect_images, (image_paths, self.face_model))
+                        async_result = pool.apply_async(_run_detect_images, (image_paths, self.face_model, self.au_model))
                         try:
                             serialized = async_result.get(timeout=self.batch_timeout)
                         except multiprocessing.TimeoutError:
