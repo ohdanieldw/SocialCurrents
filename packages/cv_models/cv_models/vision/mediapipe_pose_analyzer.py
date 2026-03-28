@@ -158,6 +158,24 @@ class MediaPipePoseAnalyzer:
         self.initialized = True
         logger.info("MediaPipe Pose Landmarker initialized successfully")
 
+    def _reset_landmarker(self):
+        """Close and discard the current landmarker so the next
+        ``_initialize_model()`` call creates a fresh instance.
+
+        MediaPipe's VIDEO running mode tracks internal temporal state
+        (timestamps must increase monotonically).  Without a reset the
+        second video in a batch would start at t = 0 ms, which is less
+        than the final timestamp of the first video, causing:
+        ``Input timestamp must be monotonically increasing``.
+        """
+        if self.initialized and self.landmarker is not None:
+            try:
+                self.landmarker.close()
+            except Exception:
+                pass
+        self.landmarker = None
+        self.initialized = False
+
     def _process_frame(
         self, frame_bgr: np.ndarray, timestamp_ms: int
     ) -> Tuple[Dict[str, float], Optional[np.ndarray]]:
@@ -206,8 +224,9 @@ class MediaPipePoseAnalyzer:
             return ""
 
     def analyze_video(self, video_path: str, keep_per_frame: bool = False) -> Dict[str, Any]:
-        if not self.initialized:
-            self._initialize_model()
+        # Always start with a fresh landmarker so timestamps reset to 0.
+        self._reset_landmarker()
+        self._initialize_model()
 
         logger.info(f"Analyzing pose landmarks in video: {video_path}")
 

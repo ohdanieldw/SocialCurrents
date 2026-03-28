@@ -1,11 +1,16 @@
 """
 Py-Feat Analyzer wrapper to produce pf_* features (AUs, emotions, face geometry).
 """
+import warnings
+warnings.filterwarnings("ignore", category=FutureWarning, module="timm")
+warnings.filterwarnings("ignore", category=UserWarning, module="sklearn")
+
 from typing import Dict, Any, Optional, Tuple, Iterable, List
 import importlib.util
 import logging
 import sys
 
+import multiprocessing
 import shutil
 import subprocess
 import tempfile
@@ -62,13 +67,54 @@ REQUIRED_FEATURES = (
 )
 
 
+def _run_detect_images(image_paths: List[str], face_model: str = 'mtcnn') -> Optional[List[Dict[str, Any]]]:
+    """Run Py-Feat detect_images in a subprocess-safe function.
+
+    Builds its own Detector, suppresses noisy logging, and returns
+    the result as a list of row-dicts so it can cross process boundaries.
+    Returns None on any error.
+    """
+    try:
+        # Suppress noisy library output in the subprocess
+        logging.getLogger('feat').setLevel(logging.ERROR)
+
+        from feat import Detector  # noqa: F811
+        detector = Detector(device='cpu', face_model=face_model)
+
+        try:
+            result = detector.detect_images(image_paths)
+        except AttributeError:
+            result = [detector.detect_image(p) for p in image_paths]
+
+        # Serialise to list-of-dicts so it can be returned through the Pool
+        if isinstance(result, list):
+            rows = []
+            for single in result:
+                df = single.to_pandas() if hasattr(single, 'to_pandas') else single
+                if df is not None and len(df) > 0:
+                    rows.append(df.to_dict(orient='records'))
+                else:
+                    rows.append([])
+            return rows
+
+        df = result.to_pandas() if hasattr(result, 'to_pandas') else result
+        if df is not None and len(df) > 0:
+            return [df.to_dict(orient='records')]
+        return None
+    except Exception:
+        return None
+
+
 class PyFeatAnalyzer:
     MAX_SAMPLE_FRAMES = 120
     BATCH_SIZE = 12
     MAX_FRAME_EDGE = 1280
 
-    def __init__(self, device: str = 'cpu'):
+    def __init__(self, device: str = 'cpu', sample_rate: int = 5, batch_timeout: float = 30, face_model: str = 'mtcnn'):
         self.device = device
+        self.sample_rate = max(1, int(sample_rate))
+        self.batch_timeout = float(batch_timeout) if batch_timeout else None
+        self.face_model = face_model
         self._init_error: Optional[str] = None
         ensure_legacy_stats()
         self._ensure_lib2to3()
@@ -105,7 +151,7 @@ class PyFeatAnalyzer:
             try:
                 from feat import Detector  # type: ignore
                 # Lower the face detection threshold to improve sensitivity on small/low-contrast faces
-                detector = Detector(device=self.device, face_detection_threshold=0.15)
+                detector = Detector(device=self.device, face_model=self.face_model, face_detection_threshold=0.15)
                 self._init_error = None
             finally:
                 # Restore original method even if Detector() fails
@@ -372,7 +418,7 @@ class PyFeatAnalyzer:
 
     def _detect_features(self, detector, video_path: str, keep_per_frame: bool = False) -> Dict[str, Any]:
         """Run Py-Feat detection on a sampled subset of frames to bound memory usage."""
-        frame_indices = self._select_frame_indices(video_path, self.MAX_SAMPLE_FRAMES)
+        frame_indices = self._select_frame_indices(video_path)
         if not frame_indices:
             logger.warning("Py-Feat: no readable frames detected in %s", video_path)
             return self._ensure_required_features({})
@@ -454,30 +500,35 @@ class PyFeatAnalyzer:
                     if not image_paths:
                         continue
 
-                    # Suppress verbose warnings coming from the Py-Feat package (e.g. repeated
-                    # "NO FACE is detected" messages). We temporarily raise the library logger
-                    # level to ERROR while calling into it, then restore the previous level.
-                    feat_logger = logging.getLogger('feat')
-                    prev_level = feat_logger.level
-                    feat_logger.setLevel(logging.ERROR)
+                    # Run detection in a subprocess so it can be killed on timeout.
+                    # detect_images() can block in C/PyTorch code that ignores signals.
+                    pool = multiprocessing.Pool(1)
                     try:
+                        async_result = pool.apply_async(_run_detect_images, (image_paths, self.face_model))
                         try:
-                            result = detector.detect_images(image_paths)
-                        except AttributeError:
-                            # Older Py-Feat versions expose detect_image only; fallback to sequential calls
-                            result = [detector.detect_image(path) for path in image_paths]
+                            serialized = async_result.get(timeout=self.batch_timeout)
+                        except multiprocessing.TimeoutError:
+                            logger.warning(
+                                "Py-Feat: batch %d timed out after %ds (frames %s), skipping batch",
+                                batch_num, int(self.batch_timeout), batch_frame_idx_list,
+                            )
+                            pool.terminate()
+                            pool.join()
+                            continue
                     finally:
-                        try:
-                            feat_logger.setLevel(prev_level)
-                        except Exception:
-                            pass
+                        pool.terminate()
+                        pool.join()
 
-                    if isinstance(result, list):
-                        for i, single in enumerate(result):
-                            single_idx = [batch_frame_idx_list[i]] if i < len(batch_frame_idx_list) else None
-                            update_stats(single, single_idx)
-                    else:
-                        update_stats(result, batch_frame_idx_list)
+                    # Deserialise the subprocess result and feed into update_stats
+                    if serialized is not None:
+                        for records in serialized:
+                            if records:
+                                df = pd.DataFrame(records)
+                                # Figure out which frame indices this chunk covers
+                                chunk_len = len(df)
+                                chunk_indices = batch_frame_idx_list[:chunk_len]
+                                update_stats(df, chunk_indices)
+
                 finally:
                     temp_dir.cleanup()
         finally:
@@ -505,22 +556,17 @@ class PyFeatAnalyzer:
             if counts.get(col, 0) > 0
         }
 
-    @staticmethod
-    def _select_frame_indices(video_path: str, max_frames: int) -> List[int]:
+    def _select_frame_indices(self, video_path: str) -> List[int]:
         cap = cv2.VideoCapture(video_path)
         if not cap.isOpened():
             return []
 
         total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT) or 0)
-        if total_frames <= 0:
-            total_frames = max_frames
-
-        if total_frames <= max_frames:
-            indices = list(range(total_frames))
-        else:
-            indices = np.linspace(0, total_frames - 1, max_frames, dtype=int).tolist()
-
         cap.release()
+        if total_frames <= 0:
+            return []
+
+        indices = list(range(0, total_frames, self.sample_rate))
         return indices
 
     @staticmethod

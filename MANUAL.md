@@ -107,7 +107,7 @@ bash run_macos.sh -i data/ -o results/session1/
 bash run_macos.sh -i data/ --is-audio
 
 # Run only a subset of features (faster)
-bash run_macos.sh -i data/ -f basic_audio,librosa_spectral,mediapipe_pose_vision
+bash run_macos.sh -i data/ -f basic_audio,librosa_spectral,mediapipe_pose_vision,pyfeat_vision
 
 # List all available features
 bash run_macos.sh --list-features
@@ -132,6 +132,7 @@ usage: python run_pipeline.py [-h] [-i INPUT] [-o OUTPUT_DIR] [-f FEATURES]
                               [--list-features] [--skip-slow] [--overwrite]
                               [--normalize-fps] [--is-audio]
                               [--log-file LOG_FILE] [--decimal-places N]
+                              [--pyfeat-sample-rate N] [--pyfeat-batch-timeout S]
                               [--check-dependencies]
 ```
 
@@ -145,6 +146,8 @@ usage: python run_pipeline.py [-h] [-i INPUT] [-o OUTPUT_DIR] [-f FEATURES]
 | `--log-file` | *(none)* | Optional path for a run-level log file; per-subject logs are written automatically to each subject's output folder |
 | `--overwrite` | `False` | Reprocess files even if output already exists |
 | `--normalize-fps` | `False` | Re-encode input videos to constant 25 fps via ffmpeg before processing |
+| `--pyfeat-sample-rate` | `5` | Process every Nth video frame for Py-Feat (5 = 5 Hz at 25 fps) |
+| `--pyfeat-batch-timeout` | `30` | Seconds before a Py-Feat batch is killed and skipped |
 | `--check-dependencies` | — | Check whether required Python packages are installed, then exit |
 
 ### Supported input formats
@@ -835,7 +838,7 @@ Default cache location: `~/.cache/huggingface/hub/`
 ### Running out of memory
 Use `-f` to select only the features you need:
 ```bash
-bash run_macos.sh -i data/ -f basic_audio,librosa_spectral,mediapipe_pose_vision
+bash run_macos.sh -i data/ -f basic_audio,librosa_spectral,mediapipe_pose_vision,pyfeat_vision
 ```
 Vision models are the heaviest consumers. Audio-only runs are much lighter.
 

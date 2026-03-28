@@ -5,7 +5,7 @@
 #   bash run_macos.sh -i data/ -o output/
 #   bash run_macos.sh --list-features
 #   bash run_macos.sh --check-dependencies
-#   bash run_macos.sh -i data/ -f basic_audio,librosa_spectral,mediapipe_pose_vision
+#   bash run_macos.sh -i data/ -f basic_audio,librosa_spectral,mediapipe_pose_vision,pyfeat_vision
 #
 # Run 'bash run_macos.sh --help' for all options.
 # If the environment does not exist yet, run: bash setup_macos.sh

@@ -3,6 +3,29 @@
 All notable changes to SocialCurrents will be documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [0.1.2] — 2026-03-29
+
+### Added
+- `analysis/cross_corr.py` — standalone lagged cross-correlation analysis script
+  - Aligns pipeline timeseries features with continuous rating data (e.g., trustworthiness)
+  - PCA (top 10 components) + 4 conceptual summary dimensions (movement energy, vocal energy, spectral complexity, openSMILE summary)
+  - Lagged cross-correlation with configurable lag range and time bin size
+  - Benjamini-Hochberg FDR correction via statsmodels (graceful fallback if not installed)
+  - Self-documenting output: `--rater`, `--target`, `--rating-col` args; CSV header comments with full run parameters
+  - PCA legend labels show top 3 contributing features per component
+- `--pyfeat-sample-rate` flag (default: 5) — process every Nth frame for Py-Feat instead of all frames
+- `--pyfeat-batch-timeout` flag (default: 30s) — kill and skip a Py-Feat batch that hangs
+- `--overwrite` flag for `analysis/cross_corr.py`
+
+### Fixed
+- **MediaPipe batch processing bug:** PoseLandmarker now resets between videos, fixing "Input timestamp must be monotonically increasing" error on the second video in a batch
+- **Py-Feat hanging on full videos:** replaced `signal.alarm` timeout (ineffective against C/PyTorch code) with `multiprocessing.Pool` subprocess timeout that can forcibly terminate stuck batches
+
+### Changed
+- Py-Feat frame sampling changed from 120 evenly-spaced frames to every-Nth-frame (default every 5th frame = 5 Hz at 25 fps); interpolation to full frame rate is unchanged
+- Py-Feat detection now runs in subprocess per batch for timeout safety
+- `pyfeat_vision` added to the default quick-test feature set in documentation examples
+
 ## [0.1.1] — 2026-03-27
 
 ### Added

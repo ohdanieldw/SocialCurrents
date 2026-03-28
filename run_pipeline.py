@@ -4,6 +4,10 @@ Main entry point for the multimodal data pipeline.
 It can be run directly with Poetry without activating a shell:
     poetry run python run_simple.py [options]
 """
+import warnings
+warnings.filterwarnings("ignore", category=FutureWarning, module="timm")
+warnings.filterwarnings("ignore", category=UserWarning, module="sklearn")
+
 import os
 import sys
 import argparse
@@ -347,7 +351,24 @@ def main() -> None:
         action="store_true",
         help="Check if all required dependencies are installed",
     )
-    parser.add_argument("--version", action="version", version="SocialCurrents 0.1.0")
+    parser.add_argument(
+        "--pyfeat-sample-rate",
+        type=int,
+        default=5,
+        help="Process every Nth video frame for Py-Feat (default: 5, i.e. 5 Hz at 25 fps)",
+    )
+    parser.add_argument(
+        "--pyfeat-batch-timeout",
+        type=float,
+        default=30,
+        help="Seconds before a Py-Feat batch is killed and skipped (default: 30)",
+    )
+    parser.add_argument(
+        "--pyfeat-face-model",
+        default="mtcnn",
+        help="Face detection model for Py-Feat: mtcnn, retinaface, img2pose (default: mtcnn)",
+    )
+    parser.add_argument("--version", action="version", version="SocialCurrents 0.1.2")
     args = parser.parse_args()
 
     if any(a in sys.argv for a in ("-d", "--data-dir")):
@@ -401,7 +422,16 @@ def main() -> None:
         sys.exit(1)
 
     try:
-        pipeline = MultimodalPipeline(output_dir=output_dir, features=features, device="cpu", decimal_places=args.decimal_places, overwrite=args.overwrite)
+        pipeline = MultimodalPipeline(
+            output_dir=output_dir,
+            features=features,
+            device="cpu",
+            decimal_places=args.decimal_places,
+            overwrite=args.overwrite,
+            pyfeat_sample_rate=args.pyfeat_sample_rate,
+            pyfeat_batch_timeout=args.pyfeat_batch_timeout,
+            pyfeat_face_model=args.pyfeat_face_model,
+        )
 
         try:
             import torch  # type: ignore[import]

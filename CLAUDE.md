@@ -12,7 +12,7 @@ bash setup_macos.sh
 bash run_macos.sh -i data/ -o output/
 
 # Run specific features only (faster)
-bash run_macos.sh -i data/ -f basic_audio,librosa_spectral,mediapipe_pose_vision
+bash run_macos.sh -i data/ -f basic_audio,librosa_spectral,mediapipe_pose_vision,pyfeat_vision
 
 # Run directly after activating env
 conda activate pipeline-env
@@ -34,6 +34,8 @@ Pre-process with ffmpeg to convert to constant frame rate before running the pip
 ```bash
 ffmpeg -i input.MP4 -vsync cfr -r 25 output.MP4
 ```
+
+Note: MediaPipe's PoseLandmarker is now reset between videos in batch processing (via `_reset_landmarker()`), so the timestamp error no longer occurs when processing multiple constant-frame-rate videos sequentially.
 
 ### WhisperX on Apple Silicon
 WhisperX transcription segfaults on Apple Silicon Macs when the conda environment runs x86 Python under Rosetta. ctranslate2 requires native ARM or proper x86 hardware. Transcription features (whisperx, sbert_text, deberta_text) must be run on an x86 Linux machine or GPU server until the conda environment is recreated as ARM-native.
@@ -103,7 +105,7 @@ Three vision models return per-frame sequences for the time-series CSV:
 | Model | Key in features dict | Frames sampled |
 |---|---|---|
 | MediaPipe (`mediapipe_pose_vision`) | `mediapipe_pose_vision_per_frame` | Every frame |
-| Py-Feat (`pyfeat_vision`) | `pyfeat_vision_per_frame` | Up to 120 evenly sampled |
+| Py-Feat (`pyfeat_vision`) | `pyfeat_vision_per_frame` | Every Nth frame (default N=5, configurable via `--pyfeat-sample-rate`) |
 | EmotiEffNet (`emotieffnet_vision`) | `emotieffnet_vision_per_sample` | Up to 64 evenly sampled |
 
 Each entry is a list of dicts with `frame_idx`, `timestamp`, and the model's feature keys. `_build_timeindexed_csv()` interpolates sampled-frame data to all video frames via `np.interp`.
@@ -135,4 +137,5 @@ Many vision/audio analyzers call `ensure_repo(repo_key)` at init time (`cv_model
 | `packages/cv_models/cv_models/vision/emotieffnet_analyzer.py` | Valence/arousal/emotions, per-sample collection in `analyze_video()` |
 | `packages/audio_models/audio_models/utils/audio_extraction.py` | ffmpeg wrapper — extracts mono 16 kHz WAV from video |
 | `packages/cv_models/cv_models/external/repo_manager.py` | On-demand git clone for upstream vision model repos |
+| `analysis/cross_corr.py` | Lagged cross-correlation between timeseries features and continuous ratings |
 | `MANUAL.md` | End-user documentation (output format, feature reference with temporality notes) |

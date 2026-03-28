@@ -51,6 +51,9 @@ poetry.lock
 lab instructions.py
 old README.md
 checklist.md
+"PowerShell final commands.py"
+"error message.py"
+poetry.toml
 
 # Media files
 *.mp4

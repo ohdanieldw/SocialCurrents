@@ -30,6 +30,9 @@ class MultimodalPipeline:
         keep_per_frame: bool = False,
         decimal_places: int = 3,
         overwrite: bool = False,
+        pyfeat_sample_rate: int = 5,
+        pyfeat_batch_timeout: float = 30,
+        pyfeat_face_model: str = 'mtcnn',
     ):
         """
         Initialize the multimodal pipeline.
@@ -39,11 +42,16 @@ class MultimodalPipeline:
             features: List of features to extract (if None, extract all)
             device: Device to run models on ("cpu" or "cuda")
             keep_per_frame: Keep per-frame sequence outputs for supported models
+            pyfeat_sample_rate: Process every Nth frame for Py-Feat (default: 5)
+            pyfeat_batch_timeout: Seconds before a Py-Feat batch is killed (default: 30)
         """
         self.device = device
         self.keep_per_frame = bool(keep_per_frame)
         self.decimal_places = int(decimal_places)
         self.overwrite = bool(overwrite)
+        self.pyfeat_sample_rate = int(pyfeat_sample_rate)
+        self.pyfeat_batch_timeout = float(pyfeat_batch_timeout)
+        self.pyfeat_face_model = str(pyfeat_face_model)
         self._tracker: list = []
 
         # Set up output directory
@@ -295,7 +303,12 @@ class MultimodalPipeline:
             elif feature_name == "pyfeat_vision":
                 try:
                     from cv_models.vision.pyfeat_analyzer import PyFeatAnalyzer
-                    self.extractors[feature_name] = PyFeatAnalyzer(device=self.device)
+                    self.extractors[feature_name] = PyFeatAnalyzer(
+                        device=self.device,
+                        sample_rate=self.pyfeat_sample_rate,
+                        batch_timeout=self.pyfeat_batch_timeout,
+                        face_model=self.pyfeat_face_model,
+                    )
                 except Exception as e:
                     print(f"Warning: pyfeat_vision unavailable: {e}")
                     self.extractors[feature_name] = None
