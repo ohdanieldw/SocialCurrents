@@ -18,7 +18,7 @@ SocialCurrents is a multimodal feature extraction pipeline for social and behavi
 - [Feature extractors](#feature-extractors)
 - [Feature reference](#feature-reference)
 - [Facial expression extraction (Py-Feat)](#facial-expression-extraction-py-feat)
-- [Analysis tools](#analysis-tools)
+- [Analysis toolkit](#analysis-toolkit)
 - [Optional & heavy features](#optional--heavy-features)
 - [Environment variables](#environment-variables)
 - [Troubleshooting](#troubleshooting)
@@ -475,22 +475,96 @@ You generally don't need to change this. Lower it if you want the pipeline to sk
 bash run_macos.sh -i data/ -f pyfeat_vision --pyfeat-batch-timeout 15
 ```
 
-## Analysis tools
+## Analysis toolkit
 
-### Lagged cross-correlation (`analysis/cross_corr.py`)
+SocialCurrents includes four analysis tools that take the extracted features and produce publication-ready results. Each tool is a standalone script with flexible options for different research designs.
 
-Correlate pipeline features with continuous behavioral ratings (e.g., trustworthiness, warmth):
+### Workflow
 
-```bash
-conda activate pipeline-env
-python analysis/cross_corr.py \
-  -f output/dyad001/sub001/dyad001_sub001_timeseries_features.csv \
-  -r ratings/sub001_trustworthiness.csv \
-  --rater sub001 --target sub007 --rating-col Value \
-  -o analysis_output/dyad001/
+```
+1. Extract features          python run_pipeline.py -i data/ -o output/
+       |
+2. Describe your data        python analysis/describe.py -f output/
+       |
+3. Relate to outcomes        python analysis/correlate.py -f ... -t ratings.csv
+       |
+4. Discover states           python analysis/segment.py -f ...
+       |
+5. Measure coordination      python analysis/synchronize.py --person-a ... --person-b ...
 ```
 
-Outputs a cross-correlation CSV (with FDR-corrected p-values) and a plot showing 10 PCA components + 4 conceptual dimensions (movement energy, vocal energy, spectral complexity, openSMILE summary) at lags from -5s to +15s.
+### `describe.py` -- Understand Your Data
+
+Generates a comprehensive descriptive summary of your extracted features before you run any statistical analyses. Reports per-feature statistics (mean, SD, skewness, kurtosis, percent zero/NaN), groups features by modality, tests stationarity (ADF test), and produces diagnostic plots: timeseries over time, PCA scree plot, loadings heatmap, feature distributions, and inter-dimension correlations. In **batch mode**, pass a directory to process all subjects at once and get a cross-subject comparison with box plots.
+
+```bash
+# Single subject
+python analysis/describe.py \
+  -f output/dyad005/sub010/dyad005_sub010_timeseries_features.csv \
+  -o results/sub010_descriptives/
+
+# Batch -- all subjects in a directory
+python analysis/describe.py -f output/test_full5/ -o results/descriptives_all/
+```
+
+### `correlate.py` -- Relate Features to Outcomes
+
+Computes lagged cross-correlation between extracted behavioral features and external target signals. **Single mode** correlates features with a dynamic rating timeseries (e.g., continuous trustworthiness judgments from a slider task), a physiological signal, or any continuous measure -- with adjustable lag range to capture reaction time in ratings. **Multi mode** correlates features with multi-channel neural data (EEG, fNIRS, multi-voxel patterns), supporting PCA, Factor Analysis, ICA, CCA, and ROI-based reduction of target channels. All modes include Benjamini-Hochberg FDR correction and flexible dimensionality reduction (`pca`, `fa`, `ica`, `grouped`, `every`, or `all` to run all methods and compare).
+
+```bash
+# Single: behavioral features vs. trustworthiness rating
+python analysis/correlate.py --mode single \
+  -f output/dyad005/sub010/dyad005_sub010_timeseries_features.csv \
+  -t data/Trait/Trustworthiness/sub009rating.csv \
+  --reduce-features pca --n-components 5 --label Trustworthiness \
+  -o results/sub010/
+
+# Multi: behavioral features vs. fNIRS with ROI averaging
+python analysis/correlate.py --mode multi \
+  -f output/dyad005/sub010/dyad005_sub010_timeseries_features.csv \
+  -t data/fNIRS/dyad005_sub009_fnirs.csv \
+  --reduce-features pca --reduce-target roi-average \
+  --roi-config data/fNIRS/roi_config.json \
+  -o results/sub009_neural/
+```
+
+### `segment.py` -- Discover Conversational States
+
+Segments a conversation into distinct behavioral states using Hidden Markov Models (HMM), changepoint detection, or windowed k-means clustering. When set to `auto`, the number of states is selected via BIC/AIC model comparison. States are automatically sorted by overall energy level (State 1 = quietest, State N = most animated) so they are comparable across subjects. Output includes state profiles showing what each state "looks like" across feature dimensions, transition probability matrices, per-visit duration statistics, and a color-coded state timeline. Directly links to impression rating analysis -- e.g., "which conversational states predict changes in perceived trustworthiness?"
+
+```bash
+python analysis/segment.py \
+  -f output/dyad005/sub010/dyad005_sub010_timeseries_features.csv \
+  --method hmm --n-states auto --max-states 8 \
+  --reduce-features pca --n-components 5 \
+  -o results/sub010_segments/
+```
+
+### `synchronize.py` -- Measure Interpersonal Coordination
+
+Implements 10 synchrony methods spanning the full literature on interpersonal coordination, from basic windowed correlation to nonlinear dynamics and directional causality models.
+
+| Category | Methods |
+|---|---|
+| **Time-domain** | Rolling Pearson, windowed cross-correlation, Lin's concordance |
+| **Nonlinear dynamics** | Cross-recurrence quantification (RQA), detrended cross-correlation (DCCA) |
+| **Frequency-domain** | Spectral coherence, wavelet coherence |
+| **Directionality** | Granger causality, transfer entropy, coupled oscillator models |
+
+All methods support lagged analysis and permutation-based surrogate testing for statistical validity. Directional methods report leader-follower dynamics and how leadership shifts over the conversation. Select any subset of methods via `--methods` or run all at once.
+
+```bash
+python analysis/synchronize.py \
+  --person-a output/dyad005/sub009/dyad005_sub009_timeseries_features.csv \
+  --person-b output/dyad005/sub010/dyad005_sub010_timeseries_features.csv \
+  --methods pearson,crosscorr,rqa,granger,coherence \
+  --reduce-features grouped --window-size 30 \
+  -o results/dyad005_synchrony/
+```
+
+### Why this toolkit
+
+Most multimodal pipelines stop at feature extraction. SocialCurrents goes further -- from raw video to publication-ready analyses of how behavioral cues predict social perception, how conversation partners coordinate their behavior, and what latent states structure a social interaction. The analysis tools work with any timeseries data, not just SocialCurrents output -- researchers can use `correlate.py` with EEG, fNIRS, or any multi-channel neural recording, and `synchronize.py` with any pair of behavioral or physiological timeseries.
 
 ## Optional & heavy features
 

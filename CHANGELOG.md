@@ -6,14 +6,14 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ## [0.1.1] — 2026-03-29
 
 ### Added
-- `analysis/cross_corr.py` — standalone lagged cross-correlation analysis script
+- `analysis/correlate.py` — standalone lagged cross-correlation analysis script
   - Aligns pipeline timeseries features with continuous rating data (e.g., trustworthiness)
   - PCA (top 10 components) + 4 conceptual summary dimensions (movement energy, vocal energy, spectral complexity, openSMILE summary)
   - Lagged cross-correlation with configurable lag range and time bin size
   - Benjamini-Hochberg FDR correction via statsmodels (graceful fallback if not installed)
   - Self-documenting output: `--rater`, `--target`, `--rating-col` args; CSV header comments with full run parameters
   - PCA legend labels show top 3 contributing features per component
-- `--overwrite` flag for both the main pipeline and `analysis/cross_corr.py`
+- `--overwrite` flag for both the main pipeline and `analysis/correlate.py`
 - `--decimal-places` flag to control CSV float rounding (default: 3)
 - `--skip-slow` flag to exclude CPU-prohibitive extractors
 - `-i` / `--input` flag (replaces deprecated `-d` / `--data-dir`)

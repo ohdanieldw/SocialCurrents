@@ -139,4 +139,5 @@ Many vision/audio analyzers call `ensure_repo(repo_key)` at init time (`cv_model
 | `packages/cv_models/cv_models/vision/emotieffnet_analyzer.py` | Valence/arousal/emotions, per-sample collection in `analyze_video()` |
 | `packages/audio_models/audio_models/utils/audio_extraction.py` | ffmpeg wrapper — extracts mono 16 kHz WAV from video |
 | `packages/cv_models/cv_models/external/repo_manager.py` | On-demand git clone for upstream vision model repos |
-| `analysis/cross_corr.py` | Lagged cross-correlation between timeseries features and continuous ratings |
+| `analysis/correlate.py` | Lagged cross-correlation between pipeline features and target signals (ratings, EEG, fNIRS) |
+| `analysis/utils.py` | Shared analysis utilities: loading, binning, reduction, correlation, plotting |
