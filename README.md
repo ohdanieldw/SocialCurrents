@@ -21,6 +21,7 @@ SocialCurrents is a multimodal feature extraction and analysis toolkit for socia
 - [Optional & heavy features](#optional--heavy-features)
 - [Environment variables](#environment-variables)
 - [Troubleshooting](#troubleshooting)
+- [Roadmap](#roadmap)
 - [References](#references)
 - [Funding](#funding)
 - [Citation](#citation)
@@ -648,6 +649,34 @@ Use `-f` to select only the features you need:
 bash run_macos.sh -i data/ -f basic_audio,librosa_spectral,mediapipe_pose_vision,pyfeat_vision
 ```
 Vision models are the heaviest consumers. Audio-only runs are much lighter.
+
+## Roadmap
+
+### Known limitations to fix
+
+- **WhisperX on Apple Silicon.** Transcription currently crashes on Apple Silicon Macs running x86 conda environments under Rosetta (ctranslate2 segfault). This blocks all downstream NLP extractors (deberta, sbert, simcse, sentiment) on local Macs. Fix: rebuild conda environment as ARM-native, or migrate to `mlx-whisper` for Apple Silicon.
+- **Py-Feat AU model.** The `xgb` AU model produces continuous intensity values (0-1) but hangs during model loading due to a sklearn pickle compatibility issue. The `svm` fallback works but outputs binary 0/1 (present/absent). Fix: patch the sklearn unpickling, or retrain AU models with a compatible sklearn version.
+- **Py-Feat processing speed.** At ~4 seconds per frame on CPU, processing a 10-minute video at 5 fps takes ~40 minutes. Batch-level GPU acceleration or a lighter face analysis model would reduce this significantly.
+- **Linux support.** Setup and run scripts are macOS-only. The Python code is cross-platform, but `setup_macos.sh` needs a Linux equivalent.
+
+### Planned features
+
+- **Turn-level linguistic features.** Once WhisperX is working, extract per-turn features: speaking rate, pause duration, turn-taking latency, interruption frequency, backchannel rate. These are among the strongest predictors of rapport and dominance in the conversation analysis literature.
+- **Lexical and semantic features.** LIWC-style word category counts (positive emotion words, cognitive process words, social words), type-token ratio, lexical diversity (MTLD), semantic coherence between turns, topic shift detection.
+- **Prosodic contour features.** Beyond global pitch/volume: extract F0 contours per utterance, pitch reset at turn boundaries, final lowering, question intonation classification. These carry social signaling information that global averages miss.
+- **Gaze and eye contact.** Integrate gaze direction estimation (e.g., L2CS-Net or ETH-XGaze) to capture mutual gaze, gaze aversion, and gaze-speech coordination.
+- **Multi-person pose.** Current MediaPipe tracks one person per video. Extend to multi-person tracking for group interactions using ViTPose or MMPose.
+- **Real-time processing mode.** Stream features from a live video feed for real-time behavioral monitoring or neurofeedback experiments.
+
+### Future analysis directions
+
+- **Multivariate pattern analysis.** Use the full feature space (not just PCA) to predict social outcomes via machine learning (SVM, random forest, neural net) with cross-validation. `analysis/predict.py` would take features + outcome labels and run classification/regression with feature importance.
+- **Dynamic structural equation modeling (DSEM).** Multilevel time-series models that capture within-dyad and between-dyad variability in coupling dynamics. Would extend the coupled oscillator model in `synchronize.py` to handle random effects across dyads.
+- **Network analysis of behavioral coordination.** For group interactions (3+ people), construct dynamic networks where edges represent pairwise synchrony and analyze network topology over time — centrality, clustering, information flow.
+- **Automated behavioral coding.** Train classifiers on extracted features to reproduce human behavioral coding schemes (e.g., SPAFF for couples, CIRS for rapport). Would let researchers apply established coding systems without manual annotation.
+- **Longitudinal analysis.** Tools for tracking how behavioral patterns change across multiple sessions with the same participants — therapy progress, relationship development, skill acquisition.
+
+Contributions and feature requests are welcome at [github.com/ohdanieldw/socialcurrents/issues](https://github.com/ohdanieldw/socialcurrents/issues).
 
 ## Funding
 
