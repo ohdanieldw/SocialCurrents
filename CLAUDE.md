@@ -16,12 +16,12 @@ bash run_macos.sh -i data/ -f basic_audio,librosa_spectral,mediapipe_pose_vision
 
 # Run directly after activating env
 conda activate pipeline-env
-python run_pipeline.py -i data/ -o output/
-python run_pipeline.py --list-features
-python run_pipeline.py --check-dependencies
+python extract.py -i data/ -o output/
+python extract.py --list-features
+python extract.py --check-dependencies
 ```
 
-The `run_macos.sh` wrapper handles `conda run` activation; it calls `run_pipeline.py` with all passed arguments.
+The `run_macos.sh` wrapper handles `conda run` activation; it calls `extract.py` with all passed arguments.
 
 ## Known Issues
 
@@ -64,7 +64,7 @@ Note: `pyfeat_vision` now runs efficiently on CPU thanks to every-Nth-frame samp
 ### Package layout
 
 ```
-run_pipeline.py           # CLI entry point; defines FEATURE_CATALOG
+extract.py           # CLI entry point; defines FEATURE_CATALOG
 packages/
   core_pipeline/          # MultimodalPipeline orchestrator
   audio_models/           # Audio, speech, and ASR extractors
@@ -77,7 +77,7 @@ external/
 
 ### Execution flow
 
-1. **`run_pipeline.py`** parses CLI args → calls `MultimodalPipeline(features=[...]).process_directory(input_path)` or `.process_files([input_path])`
+1. **`extract.py`** parses CLI args → calls `MultimodalPipeline(features=[...]).process_directory(input_path)` or `.process_files([input_path])`
 2. **`MultimodalPipeline.process_video_file()`** (`packages/core_pipeline/core_pipeline/pipeline.py`):
    - Captures video FPS and total frame count
    - Extracts 16 kHz mono WAV to a temp dir via ffmpeg (`audio_models/utils/audio_extraction.py`)
@@ -125,14 +125,14 @@ Many vision/audio analyzers call `ensure_repo(repo_key)` at init time (`cv_model
 1. Create `packages/<package>/…/<name>_analyzer.py` with a `get_feature_dict(path) -> dict` method
 2. Add a lazy-init branch in `_get_extractor()` in `pipeline.py`
 3. Add the feature name to `vision_feature_flags` (if vision) or the `extract_features()` chain (if audio/NLP)
-4. Add an entry to `FEATURE_CATALOG` in `run_pipeline.py`
+4. Add an entry to `FEATURE_CATALOG` in `extract.py`
 5. Update `MANUAL.md` with temporality (time-varying vs static scalar) and output keys
 
 ## Key Files
 
 | File | Purpose |
 |---|---|
-| `run_pipeline.py` | CLI entry point; `FEATURE_CATALOG` defines all 35 extractors |
+| `extract.py` | CLI entry point; `FEATURE_CATALOG` defines all 35 extractors |
 | `packages/core_pipeline/core_pipeline/pipeline.py` | `MultimodalPipeline` — orchestration, output writing, CSV building |
 | `packages/cv_models/cv_models/vision/mediapipe_pose_analyzer.py` | Full per-frame pose, `keep_per_frame=True` returns `per_frame` list |
 | `packages/cv_models/cv_models/vision/pyfeat_analyzer.py` | Facial AUs/emotions, per-frame collection in `_detect_features()` |

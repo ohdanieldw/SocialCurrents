@@ -1,8 +1,10 @@
 #!/usr/bin/env python3
 """
-Main entry point for the multimodal data pipeline.
-It can be run directly with Poetry without activating a shell:
-    poetry run python run_simple.py [options]
+SocialCurrents feature extraction CLI.
+
+Usage:
+    python extract.py -i data/ -o output/
+    bash run_macos.sh -i data/ -o output/
 """
 import warnings
 warnings.filterwarnings("ignore", category=FutureWarning, module="timm")

@@ -547,15 +547,18 @@ class PyFeatAnalyzer:
             feat_logger.setLevel(prev_level)
 
         aggregated = self._finalize_means(totals, counts)
-        # If aggregation produced no stats, warn once at the video level so it's clear
-        # why all pf_* features are zero — avoids noisy repeated warnings from the
-        # underlying library while still surfacing the issue to users.
         if not aggregated:
             logger.warning("Py-Feat: no face detected in sampled frames for %s", video_path)
         features = self._postprocess_stats(aggregated)
         features = self._ensure_required_features(features)
         if keep_per_frame and per_frame_records:
             features['pf_per_frame'] = per_frame_records
+            logger.info("Py-Feat: %d per-frame records collected (of %d sampled frames, %d faces detected)",
+                        len(per_frame_records), n_total, n_detected)
+        elif keep_per_frame:
+            logger.warning("Py-Feat: no per-frame records collected — pf_* values will be broadcast "
+                           "as constants in the timeseries CSV. Processed %d frames, %d faces detected.",
+                           n_total, n_detected)
         return features
 
     @staticmethod

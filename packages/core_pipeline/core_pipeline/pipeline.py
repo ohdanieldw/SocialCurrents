@@ -1179,15 +1179,19 @@ class MultimodalPipeline:
             for k in vis_keys:
                 vals = np.array([float(d.get(k, np.nan)) for d in per_sample])
                 ok = np.isfinite(vals)
-                if ok.sum() < 2:
+                if ok.sum() == 0:
                     continue
-                new_cols[k] = np.interp(
-                    np.arange(n_frames),
-                    fidx[ok],
-                    vals[ok],
-                    left=vals[ok][0],
-                    right=vals[ok][-1],
-                )
+                if ok.sum() == 1:
+                    # Single data point — broadcast to all frames
+                    new_cols[k] = np.full(n_frames, vals[ok][0])
+                else:
+                    new_cols[k] = np.interp(
+                        np.arange(n_frames),
+                        fidx[ok],
+                        vals[ok],
+                        left=vals[ok][0],
+                        right=vals[ok][-1],
+                    )
 
         # ── EmotiEffNet sampled frames ───────────────────────────────────────
         _interp_vision(features.get("emotieffnet_vision_per_sample"), "eln_")

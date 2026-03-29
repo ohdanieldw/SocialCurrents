@@ -145,7 +145,7 @@ The pipeline splits on the first underscore to extract the dyad and subject IDs.
 
 ## Command reference
 
-All the flags you can pass to `run_macos.sh` (or `python run_pipeline.py`), explained in plain English:
+All the flags you can pass to `run_macos.sh` (or `python extract.py`), explained in plain English:
 
 | Flag | What it does |
 |---|---|
@@ -457,8 +457,8 @@ The AU model is the algorithm that measures how much each facial muscle group is
 
 | Option | When to use it |
 |---|---|
-| **`svm`** (default) | Fast and reliable. Completes in about 4 seconds per frame on a laptop CPU. Recommended for all standard use. |
-| `xgb` | An alternative model. May produce slightly different AU intensity values but is known to hang on some systems. Only use if you have a specific reason. |
+| **`svm`** (default) | Fast and reliable (~4 seconds per frame on CPU). Outputs binary AU values: 1 = AU present, 0 = AU absent. Good for detecting which action units are active in each frame. |
+| `xgb` | Outputs continuous AU intensity values (0.0-1.0), which is preferable for fine-grained analysis. However, XGB may hang during model loading on some systems (known sklearn compatibility issue). Try it first; if it hangs, fall back to `svm`. |
 
 ### Multiple faces
 
