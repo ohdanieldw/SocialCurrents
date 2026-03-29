@@ -2,9 +2,9 @@
 
 ![Version](https://img.shields.io/badge/version-0.1.1-blue)
 
-Extract 400+ behavioral features from video recordings and analyze social dynamics — synchrony, conversational states, and impression formation — with no manual annotation required.
+Extract 400+ behavioral features from video recordings and analyze social dynamics — interpersonal synchrony, conversational states, and impression formation — with no manual annotation required.
 
-SocialCurrents is a multimodal feature extraction pipeline for social and behavioral research. Given a folder of video recordings (e.g., dyadic interactions, interviews, group conversations), it produces time-stamped, analysis-ready feature files covering body movement, facial expression, speech, and language — with no manual annotation required.
+SocialCurrents is a multimodal feature extraction and analysis toolkit for social and behavioral research. Given video recordings of conversations, it extracts time-stamped behavioral features covering body movement, facial expression, speech, and language. Its analysis tools then relate these features to dynamic trait ratings, multi-channel neural recordings (fNIRS, EEG, fMRI), or any external timeseries — using lagged cross-correlation, HMM segmentation, and 10 interpersonal synchrony methods from the psychophysiology literature.
 
 ## Table of contents
 
