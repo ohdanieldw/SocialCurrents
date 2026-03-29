@@ -140,4 +140,3 @@ Many vision/audio analyzers call `ensure_repo(repo_key)` at init time (`cv_model
 | `packages/audio_models/audio_models/utils/audio_extraction.py` | ffmpeg wrapper — extracts mono 16 kHz WAV from video |
 | `packages/cv_models/cv_models/external/repo_manager.py` | On-demand git clone for upstream vision model repos |
 | `analysis/cross_corr.py` | Lagged cross-correlation between timeseries features and continuous ratings |
-| `MANUAL.md` | End-user documentation (output format, feature reference with temporality notes) |

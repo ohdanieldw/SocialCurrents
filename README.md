@@ -6,6 +6,25 @@ Extract 400+ behavioral features from video recordings automatically.
 
 SocialCurrents is a multimodal feature extraction pipeline for social and behavioral research. Given a folder of video recordings (e.g., dyadic interactions, interviews, group conversations), it produces time-stamped, analysis-ready feature files covering body movement, facial expression, speech, and language — with no manual annotation required.
 
+## Table of contents
+
+- [What it measures](#what-it-measures)
+- [Requirements](#requirements)
+- [Installation](#installation)
+- [Quick start](#quick-start)
+- [Usage](#usage)
+- [Command reference](#command-reference)
+- [Output format](#output-format)
+- [Feature extractors](#feature-extractors)
+- [Feature reference](#feature-reference)
+- [Facial expression extraction (Py-Feat)](#facial-expression-extraction-py-feat)
+- [Analysis tools](#analysis-tools)
+- [Optional & heavy features](#optional--heavy-features)
+- [Environment variables](#environment-variables)
+- [Troubleshooting](#troubleshooting)
+- [Funding](#funding)
+- [Citation](#citation)
+
 ## What it measures
 
 | Modality | What you get |
@@ -14,37 +33,6 @@ SocialCurrents is a multimodal feature extraction pipeline for social and behavi
 | **Facial expression** | Action units (AU1–AU28), valence/arousal, discrete emotion probabilities (Py-Feat, EmotiEffNet) |
 | **Speech** | Pitch, volume, spectral features (librosa, openSMILE); speech emotion recognition |
 | **Language** | Transcript (WhisperX with speaker diarization), sentiment, semantic similarity, NLI benchmarks |
-
-## Input filename convention
-
-Name your video files using the pattern `{dyadID}_{subjectID}.extension`, e.g.:
-
-```
-dyad002_sub003.MP4
-dyad002_sub007.MP4
-dyad015_sub042.MP4
-```
-
-The pipeline splits on the first underscore to extract the dyad and subject IDs. If a filename does not contain an underscore, a single folder named after the file stem is created as a fallback.
-
-## Output files
-
-Each subject gets its own subfolder nested under their dyad, e.g.:
-
-```
-output/
-  dyad002/
-    sub003/
-      dyad002_sub003_timeseries_features.csv   ← one row per video frame
-      dyad002_sub003_summary_features.csv      ← one row per recording (array features → summary stats)
-      dyad002_sub003_summary_features.json     ← nested JSON with raw arrays and model metadata
-      dyad002_sub003.log                       ← processing log for this subject
-    sub007/
-      dyad002_sub007_timeseries_features.csv
-      ...
-```
-
-The time-series CSV is the primary file for most behavioral analyses (e.g., time-lagged cross-correlations, windowed synchrony, event-locked averages).
 
 ## Requirements
 
@@ -67,7 +55,15 @@ cd socialcurrents
 bash setup_macos.sh
 ```
 
-Setup takes 5–15 minutes on first run. It creates a conda environment called `pipeline-env` and installs all Python packages automatically.
+Setup takes 5-15 minutes on first run. It creates a conda environment called `pipeline-env` and installs all Python packages automatically.
+
+For WhisperX speaker diarization, set your HuggingFace token (get one free at [huggingface.co/settings/tokens](https://huggingface.co/settings/tokens)):
+
+```bash
+export HF_TOKEN="hf_your_token_here"
+```
+
+Add this line to `~/.zshrc` or `~/.bash_profile` so it persists across sessions.
 
 ## Quick start
 
@@ -106,18 +102,9 @@ bash run_macos.sh -i data/ -o output/ --decimal-places 2
 bash run_macos.sh --list-features
 ```
 
-`--skip-slow` excludes three extractors that are prohibitively slow on CPU: `s2t_speech_to_text`, `xlsr_speech_to_text`, and `elmo_text`. When `-f` is used instead, `--skip-slow` has no effect — all explicitly requested extractors run regardless.
-
-**Variable frame rate videos** may cause errors. Use `--normalize-fps` to automatically re-encode to constant 25 fps before processing, or manually pre-process with `ffmpeg -i input.MP4 -vsync cfr -r 25 output.MP4`. See [MANUAL.md](MANUAL.md#known-issues) for details.
+**Variable frame rate videos** may cause errors. Use `--normalize-fps` to automatically re-encode to constant 25 fps before processing, or manually pre-process with `ffmpeg -i input.MP4 -vsync cfr -r 25 output.MP4`.
 
 If an extractor fails (e.g., missing dependency, incompatible model), the pipeline logs a warning and skips that extractor rather than crashing. All other extractors continue running and output files are still generated.
-
-For WhisperX speaker diarization, export your HuggingFace token first:
-
-```bash
-export HF_TOKEN=hf_your_token_here
-bash run_macos.sh -i data/ -o output/
-```
 
 ### Common workflows
 
@@ -136,7 +123,26 @@ bash run_macos.sh -i data/ -f basic_audio,librosa_spectral,whisperx_transcriptio
 bash run_macos.sh -i data/ -o output/
 ```
 
-### Command reference
+### Input filename convention
+
+Name your video files using the pattern `{dyadID}_{subjectID}.extension`, e.g.:
+
+```
+dyad002_sub003.MP4
+dyad002_sub007.MP4
+dyad015_sub042.MP4
+```
+
+The pipeline splits on the first underscore to extract the dyad and subject IDs. If a filename does not contain an underscore, a single folder named after the file stem is created as a fallback.
+
+### Supported input formats
+
+| Type | Extensions |
+|---|---|
+| Video | `.mp4`, `.MP4`, `.avi`, `.mov`, `.MOV`, `.mkv` |
+| Audio | `.wav`, `.mp3`, `.flac` (use `--is-audio`) |
+
+## Command reference
 
 All the flags you can pass to `run_macos.sh` (or `python run_pipeline.py`), explained in plain English:
 
@@ -156,6 +162,74 @@ All the flags you can pass to `run_macos.sh` (or `python run_pipeline.py`), expl
 | `--pyfeat-face-model mtcnn` | **Which face detector to use.** See [Facial expression extraction](#facial-expression-extraction-py-feat) below. |
 | `--pyfeat-au-model svm` | **Which action unit model to use.** `svm` (default, fast) or `xgb` (may hang on some systems). See [Facial expression extraction](#facial-expression-extraction-py-feat) below. |
 
+## Output format
+
+Each subject gets its own subfolder nested under their dyad:
+
+```
+output/
+  dyad002/
+    sub003/
+      dyad002_sub003_timeseries_features.csv   <- one row per video frame
+      dyad002_sub003_summary_features.csv      <- one row per recording
+      dyad002_sub003_summary_features.json     <- nested JSON with model metadata
+      dyad002_sub003.log                       <- processing log for this subject
+    sub007/
+      ...
+```
+
+### Time-series CSV (`{prefix}_timeseries_features.csv`)
+
+The primary analysis output. Each row represents one video frame.
+
+| Column | Description |
+|---|---|
+| `frame_idx` | 0-based frame index |
+| `time_seconds` | Timestamp in seconds (`frame_idx / fps`) |
+| `oc_audvol`, `oc_audpit`, ... | Audio arrays linearly interpolated from audio frame rate to video frame rate |
+| `lbrs_*`, `osm_*` | Librosa / openSMILE LLD arrays, same interpolation |
+| `GMP_land_*`, `GMP_world_*` | MediaPipe pose landmarks -- one value per video frame (full resolution) |
+| `pf_au*`, `pf_anger`, ... | Py-Feat AUs / emotions -- sampled every Nth frame, interpolated to fill all rows |
+| `eln_prob_*`, `eln_valence`, `eln_arousal` | EmotiEffNet -- sampled from up to 64 frames, interpolated |
+| All other scalar features | Broadcast (same value repeated across all rows for that file) |
+
+**Temporal resolution notes:**
+- Audio arrays (librosa, openSMILE LLDs, basic audio) are captured at ~31 samples/sec and linearly interpolated to video frame rate.
+- MediaPipe processes every video frame; each row has exact landmark values for that frame.
+- Py-Feat processes every Nth frame (default N=5); values between samples are linearly interpolated.
+- EmotiEffNet processes up to 64 evenly sampled frames; values between samples are linearly interpolated.
+- NLP features (transcription-based) and AudioStretchy configuration parameters are scalars that do not vary over time.
+
+```python
+import pandas as pd
+
+ts = pd.read_csv("output/dyad002/sub003/dyad002_sub003_timeseries_features.csv")
+
+# Pose visibility for left wrist landmark over time
+ts.plot(x="time_seconds", y="GMP_land_visi_16")
+
+# Happiness and arousal as functions of time
+ts[["time_seconds", "pf_happiness", "eln_arousal"]].set_index("time_seconds").plot()
+
+# Audio volume trajectory
+ts.plot(x="time_seconds", y="oc_audvol")
+```
+
+### Summary CSV (`{prefix}_summary_features.csv`)
+
+One row per input file. Array-valued features are summarised into statistics columns.
+
+| Feature type | Example | CSV columns produced |
+|---|---|---|
+| Scalar | `GMP_land_visi_26` = `0.94` | `GMP_land_visi_26` = `0.94` |
+| Long array (>20 elements) | `oc_audvol` = `[0.01, ...]` | `oc_audvol_mean`, `_std`, `_min`, `_max` |
+| Short array (<=20) | `lbrs_spectral_contrast` = 7 values | `..._mean/_std/_min/_max` + `..._0` ... `..._6` |
+| String / transcript | `transcription` = `"hello world"` | `transcription` = `"hello world"` |
+
+### JSON (`{prefix}_summary_features.json`)
+
+Nested structure grouped by model. Large arrays (>1000 elements) are stored as statistics objects with `mean`, `min`, `max`, `std`, `shape`, `dtype`, and `samples` fields.
+
 ## Feature extractors
 
 | Name | Category | Output prefix |
@@ -166,14 +240,14 @@ All the flags you can pass to `run_macos.sh` (or `python run_pipeline.py`), expl
 | `audiostretchy` | Audio | `AS_` |
 | `speech_emotion` | Speech | `ser_` |
 | `whisperx_transcription` | Speech/ASR | `WhX_` |
-| `xlsr_speech_to_text` | Speech/ASR | — |
-| `s2t_speech_to_text` | Speech/ASR | — |
+| `xlsr_speech_to_text` | Speech/ASR | -- |
+| `s2t_speech_to_text` | Speech/ASR | -- |
 | `deberta_text` | NLP | `DEB_` |
 | `simcse_text` | NLP | `CSE_` |
 | `albert_text` | NLP | `alb_` |
 | `sbert_text` | NLP | `BERT_` |
 | `use_text` | NLP | `USE_` |
-| `elmo_text` | NLP | — |
+| `elmo_text` | NLP | -- |
 | `mediapipe_pose_vision` | Pose | `GMP_` |
 | `vitpose_vision` | Pose | `vit_` |
 | `pyfeat_vision` | Facial | `pf_` |
@@ -183,7 +257,7 @@ All the flags you can pass to `run_macos.sh` (or `python run_pipeline.py`), expl
 | `arbex_vision` | Facial | `arbex_` |
 | `crowdflow_vision` | Video | `of_` |
 | `instadm_vision` | Video | `indm_` |
-| `optical_flow_vision` | Video | — |
+| `optical_flow_vision` | Video | -- |
 | `videofinder_vision` | Video | `ViF_` |
 | `lanegcn_vision` | Video | `GCN_` |
 | `openpose_vision` | Pose | `openPose_` |
@@ -196,12 +270,143 @@ All the flags you can pass to `run_macos.sh` (or `python run_pipeline.py`), expl
 | `me_graphau_vision` | Facial | `ann_` |
 | `heinsen_sentiment` | NLP | `arvs_` |
 | `meld_emotion` | NLP | `MELD_` |
-| `avhubert_vision` | Audio-Visual | — |
-| `fact_vision` | Video | — |
-| `video_frames_vision` | Video | — |
-| `rife_vision` | Video | — |
+| `avhubert_vision` | Audio-Visual | -- |
+| `fact_vision` | Video | -- |
+| `video_frames_vision` | Video | -- |
+| `rife_vision` | Video | -- |
 
 Run `bash run_macos.sh --list-features` for descriptions of each extractor.
+
+## Feature reference
+
+Detailed output keys for every extractor. Temporality indicates whether a feature changes per frame (time-varying) or is a single value for the whole recording (scalar).
+
+### Audio features
+
+#### `basic_audio` -- Volume & Pitch (`oc_`)
+
+Time-varying arrays at ~31 samples/sec, resampled to video frame rate.
+
+| Key | Description |
+|---|---|
+| `oc_audvol` | RMS energy (volume) per audio frame |
+| `oc_audvol_diff` | Frame-to-frame volume change |
+| `oc_audpit` | Pitch (fundamental frequency) per audio frame |
+| `oc_audpit_diff` | Frame-to-frame pitch change |
+
+#### `librosa_spectral` -- Spectral & Rhythm (`lbrs_`)
+
+Time-varying arrays resampled to video frame rate. `lbrs_tempo` and `lbrs_*_singlevalue` are scalars.
+
+| Key | Description |
+|---|---|
+| `lbrs_spectral_centroid` | Spectral centroid per audio frame |
+| `lbrs_spectral_bandwidth` | Spectral bandwidth per audio frame |
+| `lbrs_spectral_flatness` | Spectral flatness per audio frame |
+| `lbrs_spectral_rolloff` | Spectral roll-off per audio frame |
+| `lbrs_zero_crossing_rate` | Zero-crossing rate per audio frame |
+| `lbrs_rmse` | RMS energy per audio frame |
+| `lbrs_spectral_contrast` | Spectral contrast per audio frame |
+| `lbrs_tempo` | Estimated tempo in BPM (scalar) |
+
+#### `opensmile` -- Low-Level Descriptors (~1,512 features, `osm_`)
+
+LLD keys (`osm_*_sma`) are time-varying; functional keys (`osm_*_mean`, `osm_*_stddev`, etc.) are scalars.
+
+Key time-varying outputs: `osm_pcm_RMSenergy_sma`, `osm_loudness_sma`, `osm_F0final_sma`, `osm_voicingProb_sma`, `osm_jitterLocal_sma`, `osm_shimmerLocal_sma`, `osm_logHNR_sma`, `osm_mfcc1_sma`...`osm_mfcc12_sma`, `osm_spectralCentroid_sma`, `osm_spectralFlux_sma`, `osm_spectralRollOff25_sma`...`osm_spectralRollOff90_sma`, `osm_lsf1`...`osm_lsf8`.
+
+#### `audiostretchy` -- Time-Stretching Analysis (`AS_`)
+
+All static scalars: `AS_ratio`, `AS_gap_ratio`, `AS_lower_freq`, `AS_upper_freq`, `AS_buffer_ms`, `AS_threshold_gap_db`, `AS_sample_rate`, `AS_input_duration_sec`, `AS_output_duration_sec`.
+
+### Speech features
+
+#### `speech_emotion` -- Speech Emotion Recognition (`ser_`)
+
+Static scalars (probabilities summing to 1.0): `ser_neutral`, `ser_calm`, `ser_happy`, `ser_sad`, `ser_angry`, `ser_fear`, `ser_disgust`, `ser_ps`, `ser_boredom`.
+
+#### `whisperx_transcription` -- Transcription & Diarization (`WhX_`)
+
+Requires `HF_TOKEN` for speaker diarization. Static (full-recording transcript broadcast to all rows).
+
+| Key | Description |
+|---|---|
+| `transcription` | Full transcript text |
+| `language` | Detected language code |
+| `num_segments` | Number of speech segments |
+| `WhX_segment_1` ... `WhX_segment_N` | Per-segment: text, speaker, start, end |
+| `WhX_speaker1_summary` | Per-speaker: total_words, total_duration, avg_confidence |
+
+### NLP / text features
+
+> Text features require a transcription. Run `whisperx_transcription` first, or include it in the same `-f` list. All NLP features are static scalars broadcast to every row.
+
+#### `deberta_text` (`DEB_`)
+NLI benchmark scores: `DEB_SQuAD_1.1_F1`, `DEB_MNLI-m_Acc`, `DEB_SST-2_Acc`, `DEB_QNLI_Acc`, `DEB_CoLA_MCC`, `DEB_RTE_Acc`, `DEB_MRPC_F1`, `DEB_QQP_F1`, `DEB_STS-B_P`.
+
+#### `simcse_text` (`CSE_`)
+Sentence embedding benchmarks: `CSE_STS12`...`CSE_STS16`, `CSE_STSBenchmark`, `CSE_SICKRelatedness`, `CSE_Avg`.
+
+#### `sbert_text` (`BERT_`)
+Sentence embeddings: `BERT_tensor_sentences`, `BERT_score`, `BERT_ranks`.
+
+#### `albert_text` (`alb_`)
+GLUE benchmarks: `alb_mnli`, `alb_qnli`, `alb_qqp`, `alb_rte`, `alb_sst`, `alb_mrpc`, `alb_cola`, `alb_sts`.
+
+#### `heinsen_sentiment` (`arvs_`)
+Sentiment: `arvs_negative`, `arvs_neutral`, `arvs_positive`, `arvs_dominant_sentiment`, `arvs_confidence`.
+
+#### `meld_emotion` (`MELD_`)
+Dialogue-level emotion: `MELD_num_utterances`, `MELD_num_speakers`, `MELD_count_anger/disgust/fear/joy/neutral/sadness/surprise`, `MELD_num_emotion_shift`.
+
+### Vision features
+
+> Vision features are extracted from the video directly (not the audio track). They are skipped when `--is-audio` is used.
+
+#### `mediapipe_pose_vision` -- 33 Pose Landmarks (`GMP_`)
+
+Time-varying -- processes every video frame. 33 body landmarks, each with 10 attributes (330+ features):
+
+| Attribute group | Keys | Description |
+|---|---|---|
+| Normalized coords | `GMP_land_x_1`...`33`, `GMP_land_y_1`...`33`, `GMP_land_z_1`...`33` | Image coordinates [0,1] |
+| Visibility / presence | `GMP_land_visi_1`...`33`, `GMP_land_presence_1`...`33` | Detection confidence |
+| World coords | `GMP_world_x_1`...`33`, `GMP_world_y_1`...`33`, `GMP_world_z_1`...`33` | Metric coordinates (meters) |
+| World vis / presence | `GMP_world_visi_1`...`33`, `GMP_world_presence_1`...`33` | World-space confidence |
+
+Landmark mapping (1-indexed): 1=Nose, 12=Left shoulder, 13=Right shoulder, 14=Left elbow, 15=Right elbow, 16=Left wrist, 17=Right wrist, 24=Left hip, 25=Right hip.
+
+#### `pyfeat_vision` -- Facial Expression Analysis (`pf_`)
+
+Time-varying -- samples every Nth frame (default N=5), interpolated to all rows. 37 features:
+
+| Group | Keys | Description |
+|---|---|---|
+| Action Units (20) | `pf_au01`...`pf_au43` | FACS AU intensities 0-1 |
+| Emotions (7) | `pf_anger`, `pf_disgust`, `pf_fear`, `pf_happiness`, `pf_sadness`, `pf_surprise`, `pf_neutral` | Emotion probabilities |
+| Face geometry | `pf_facerectx`, `pf_facerecty`, `pf_facerectwidth`, `pf_facerectheight`, `pf_facescore` | Bounding box + confidence |
+| Head pose | `pf_pitch`, `pf_roll`, `pf_yaw` | Head orientation (degrees) |
+
+See [Facial expression extraction (Py-Feat)](#facial-expression-extraction-py-feat) for configuration options.
+
+#### `emotieffnet_vision` -- EmotiEffNet (`eln_`)
+
+Time-varying (up to 64 sampled frames, interpolated): `eln_arousal`, `eln_valence`, `eln_prob_{emotion}`. Static: `eln_top_emotion`, `eln_face_detected_ratio`, `eln_samples`.
+
+#### Other vision extractors
+
+| Extractor | Prefix | What it measures |
+|---|---|---|
+| `dan_vision` | `dan_` | Facial emotion probabilities (8 classes) |
+| `ganimation_vision` | `GAN_` | AU intensities at 4 levels (68+ features) |
+| `arbex_vision` | `arbex_` | Facial expression with reliability balancing |
+| `me_graphau_vision` | `ann_` | Graph-based AU relations (12 AUs) |
+| `openpose_vision` | `openPose_` | 18 body keypoints + joint angles |
+| `vitpose_vision` | `vit_` | 17 COCO keypoints via Vision Transformer |
+| `pare_vision` | `PARE_` | 3D body shape/pose parameters |
+| `crowdflow_vision` | `of_` | Dense optical flow statistics |
+| `optical_flow_vision` | -- | Sparse/dense optical flow (OpenCV) |
+| `instadm_vision` | `indm_` | Depth map statistics and motion descriptors |
 
 ## Facial expression extraction (Py-Feat)
 
@@ -218,7 +423,7 @@ Think of the face detector as the part of the system that first finds where the 
 | `img2pose` | A third option that estimates head pose simultaneously. Experimental; use only if the other two don't work for your data. |
 
 ```bash
-# Use the default (mtcnn) — no flag needed
+# Use the default (mtcnn) -- no flag needed
 bash run_macos.sh -i data/ -f pyfeat_vision
 
 # Explicitly choose a different detector
@@ -229,7 +434,7 @@ bash run_macos.sh -i data/ -f pyfeat_vision --pyfeat-face-model retinaface
 
 Instead of analyzing every single frame of video (which would be very slow), the pipeline analyzes every Nth frame and fills in the gaps automatically using interpolation. The default is 5, meaning it looks at one out of every 5 frames.
 
-For a typical 25 fps video, this means **5 facial measurements per second** — more than enough to capture meaningful changes in expression during a conversation.
+For a typical 25 fps video, this means **5 facial measurements per second** -- more than enough to capture meaningful changes in expression during a conversation.
 
 | Sample rate | Frames analyzed per second (at 25 fps) | 10-min video: frames analyzed | Speed |
 |---|---|---|---|
@@ -287,11 +492,54 @@ python analysis/cross_corr.py \
 
 Outputs a cross-correlation CSV (with FDR-corrected p-values) and a plot showing 10 PCA components + 4 conceptual dimensions (movement energy, vocal energy, spectral complexity, openSMILE summary) at lags from -5s to +15s.
 
-## Documentation
+## Optional & heavy features
 
-See [MANUAL.md](MANUAL.md) for the full feature reference and output format details.
+Some features require extra setup or are disabled by default:
 
-See [CHANGELOG.md](CHANGELOG.md) for version history.
+| Feature | Requirement | How to enable |
+|---|---|---|
+| `openpose_vision` | OpenPose C++ library compiled from source | Build OpenPose, set `OPENPOSE_PYTHON_PATH` env var |
+| `use_text` | TensorFlow | `pip install -e packages/nlp_models[tensorflow-stack]` |
+| `whisperx_transcription` diarization | HuggingFace token | `export HF_TOKEN=hf_...` |
+| `videofinder_vision` | Ollama running locally | `ollama serve && ollama pull llava` |
+
+## Environment variables
+
+| Variable | Used by | Description |
+|---|---|---|
+| `HF_TOKEN` | WhisperX diarization | HuggingFace access token |
+| `PARE_CHECKPOINT` | `pare_vision` | Path to custom PARE model checkpoint |
+| `VITPOSE_CHECKPOINT` | `vitpose_vision` | Path to custom ViTPose checkpoint |
+| `VITPOSE_CONFIG` | `vitpose_vision` | Path to custom ViTPose config file |
+
+## Troubleshooting
+
+### `ffmpeg not found`
+```bash
+brew install ffmpeg
+```
+
+### `No video/audio files found in <dir>`
+Check that your files have supported extensions. Video: `.mp4`, `.avi`, `.mov`, `.mkv`. Audio: `.wav`, `.mp3`, `.flac`.
+
+### `ModuleNotFoundError: No module named 'core_pipeline'`
+The local packages are not installed. Re-run setup:
+```bash
+bash setup_macos.sh
+```
+
+### `Warning: mediapipe_pose_vision unavailable`
+MediaPipe model file may not have downloaded. It is fetched automatically on first use; ensure you have internet access.
+
+### Models download on first run
+Many models (Whisper, DeBERTa, MediaPipe, etc.) are downloaded on first use. This can take several minutes. Subsequent runs use cached versions at `~/.cache/huggingface/hub/`.
+
+### Running out of memory
+Use `-f` to select only the features you need:
+```bash
+bash run_macos.sh -i data/ -f basic_audio,librosa_spectral,mediapipe_pose_vision,pyfeat_vision
+```
+Vision models are the heaviest consumers. Audio-only runs are much lighter.
 
 ## Funding
 
@@ -309,5 +557,5 @@ Initial pipeline scaffolding by Kenneth Dao; testing and debugging by Shuo Duan.
 
 ## License
 
-MIT — see [LICENSE](LICENSE).
-Copyright © 2026 Daniel DongWon Oh
+MIT -- see [LICENSE](LICENSE).
+Copyright 2026 Daniel DongWon Oh
