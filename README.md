@@ -158,7 +158,6 @@ All the flags you can pass to `run_macos.sh` (or `python run_pipeline.py`), expl
 | `--is-audio` | **Process audio files instead of video.** Use this when your input folder contains `.wav`, `.mp3`, or `.flac` files rather than video. |
 | `--log-file run.log` | **Save a copy of the processing log.** In addition to the per-subject logs saved automatically, this saves a single log covering the entire run. |
 | `--pyfeat-sample-rate 5` | **How often to measure facial expressions.** See [Facial expression extraction](#facial-expression-extraction-py-feat) below. |
-| `--pyfeat-batch-timeout 30` | **Give up on stuck facial analysis.** See [Facial expression extraction](#facial-expression-extraction-py-feat) below. |
 | `--pyfeat-face-model mtcnn` | **Which face detector to use.** See [Facial expression extraction](#facial-expression-extraction-py-feat) below. |
 | `--pyfeat-au-model svm` | **Which action unit model to use.** `svm` (default, fast) or `xgb` (may hang on some systems). See [Facial expression extraction](#facial-expression-extraction-py-feat) below. |
 
@@ -464,16 +463,9 @@ The AU model is the algorithm that measures how much each facial muscle group is
 
 When more than one face appears in a frame (e.g., in a group recording or when someone walks behind the participant), the pipeline automatically selects the face closest to the horizontal center of the frame. This works well for standard lab setups where the target participant is seated centrally in their camera view. No configuration is needed.
 
-### Batch timeout (`--pyfeat-batch-timeout`)
+### Error handling
 
-If facial analysis gets stuck on a difficult frame (e.g., heavy occlusion, unusual lighting), this setting tells the pipeline to give up after 30 seconds and move on to the next batch of frames rather than freezing indefinitely. Results collected before the stuck batch are kept.
-
-You generally don't need to change this. Lower it if you want the pipeline to skip problematic frames faster; raise it if your computer is slow and needs more time per batch.
-
-```bash
-# Shorter timeout (skip stuck frames faster)
-bash run_macos.sh -i data/ -f pyfeat_vision --pyfeat-batch-timeout 15
-```
+If facial analysis fails on a particular frame (e.g., heavy occlusion, unusual lighting), the pipeline logs a debug message and skips that frame. All successfully analyzed frames are kept. No configuration is needed.
 
 ## Analysis toolkit
 
@@ -481,17 +473,40 @@ SocialCurrents includes four analysis tools that take the extracted features and
 
 ### Workflow
 
+The four tools can be used in any order or combination depending on your research question. Start with `describe.py` to understand your data, then pick the tools that match your question:
+
+| Research question | Tools to use |
+|---|---|
+| "What do my features look like?" | `describe.py` |
+| "Do features predict trait ratings?" | `describe.py` then `correlate.py` |
+| "What are the conversation phases?" | `describe.py` then `segment.py` |
+| "Are partners behaviorally coordinated?" | `describe.py` then `synchronize.py` |
+| "Do conversational states predict impression change?" | `segment.py` then `correlate.py` (use segment output as input) |
+| "Does interpersonal synchrony predict liking?" | `synchronize.py` then `correlate.py` |
+| "Full analysis pipeline" | `describe.py` then all three |
+
+### Using the analysis tools standalone
+
+`correlate.py` and `synchronize.py` work with any timeseries CSV, not just SocialCurrents output. If you have your own behavioral coding, physiological recordings, or neural data in CSV format (columns = variables, rows = timepoints, with a time column), you can use these tools directly:
+
+```bash
+# Correlate your own behavioral coding with fNIRS
+python analysis/correlate.py --mode multi \
+  -f my_behavioral_data.csv \
+  -t my_fnirs_data.csv \
+  --reduce-target roi-average \
+  --roi-config my_rois.json \
+  -o results/
+
+# Compute synchrony between any two timeseries files
+python analysis/synchronize.py \
+  --person-a participant1.csv \
+  --person-b participant2.csv \
+  --methods pearson,granger,rqa \
+  -o results/
 ```
-1. Extract features          python run_pipeline.py -i data/ -o output/
-       |
-2. Describe your data        python analysis/describe.py -f output/
-       |
-3. Relate to outcomes        python analysis/correlate.py -f ... -t ratings.csv
-       |
-4. Discover states           python analysis/segment.py -f ...
-       |
-5. Measure coordination      python analysis/synchronize.py --person-a ... --person-b ...
-```
+
+The only requirement is that each CSV has a time column (named `time_seconds` or `VideoTime` in milliseconds) and numeric feature columns.
 
 ### `describe.py` -- Understand Your Data
 

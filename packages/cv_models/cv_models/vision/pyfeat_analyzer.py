@@ -10,7 +10,6 @@ import importlib.util
 import logging
 import sys
 
-import multiprocessing
 import shutil
 import subprocess
 import tempfile
@@ -106,98 +105,14 @@ def _select_central_face(df, frame_width: int) -> 'pd.DataFrame':
     return df.loc[kept].reset_index(drop=True)
 
 
-def _run_detect_images(image_paths: List[str], face_model: str = 'mtcnn',
-                       au_model: str = 'svm') -> Optional[List[Dict[str, Any]]]:
-    """Run Py-Feat detection in a subprocess-safe function.
-
-    Builds its own Detector, suppresses noisy logging, and returns
-    the result as a list of row-dicts so it can cross process boundaries.
-    Returns None only if every image fails.
-    """
-    try:
-        import warnings as _w
-        _w.filterwarnings("ignore", category=FutureWarning, module="timm")
-        _w.filterwarnings("ignore", category=UserWarning, module="sklearn")
-        logging.getLogger('feat').setLevel(logging.ERROR)
-
-        # scipy compat patch needed inside subprocess
-        try:
-            import sys as _sys
-            _sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
-            from cv_models.utils.scipy_compat import ensure_legacy_stats
-            ensure_legacy_stats()
-        except Exception:
-            pass
-
-        from feat import Detector  # noqa: F811
-        detector = Detector(
-            device='cpu',
-            face_model=face_model,
-            landmark_model='mobilefacenet',
-            au_model=au_model,
-            emotion_model='resmasknet',
-            facepose_model='img2pose',
-            face_detection_threshold=0.15,
-        )
-
-        # Determine frame width for multi-face selection
-        frame_width = 1280  # fallback
-        try:
-            img = cv2.imread(image_paths[0])
-            if img is not None:
-                frame_width = img.shape[1]
-        except Exception:
-            pass
-
-        # detect_images (plural) may not exist in all py-feat versions
-        try:
-            result = detector.detect_images(image_paths)
-        except (AttributeError, TypeError):
-            # Fall back to per-image detection
-            results_list = []
-            for p in image_paths:
-                try:
-                    r = detector.detect_image(p)
-                    results_list.append(r)
-                except Exception as e:
-                    logging.warning("Py-Feat: detect_image failed on %s: %s", p, e)
-            result = results_list if results_list else None
-
-        if result is None:
-            return None
-
-        # Serialise to list-of-dicts so it can be returned through the Pool
-        if isinstance(result, list):
-            rows = []
-            for single in result:
-                df = single.to_pandas() if hasattr(single, 'to_pandas') else single
-                if df is not None and len(df) > 0:
-                    df = _select_central_face(df, frame_width)
-                    rows.append(df.to_dict(orient='records'))
-                else:
-                    rows.append([])
-            return rows
-
-        df = result.to_pandas() if hasattr(result, 'to_pandas') else result
-        if df is not None and len(df) > 0:
-            df = _select_central_face(df, frame_width)
-            return [df.to_dict(orient='records')]
-        return None
-    except Exception as e:
-        logging.warning("Py-Feat subprocess error: %s", e)
-        return None
-
-
 class PyFeatAnalyzer:
     MAX_SAMPLE_FRAMES = 120
-    BATCH_SIZE = 12
     MAX_FRAME_EDGE = 1280
 
-    def __init__(self, device: str = 'cpu', sample_rate: int = 5, batch_timeout: float = 30,
+    def __init__(self, device: str = 'cpu', sample_rate: int = 5,
                  face_model: str = 'mtcnn', au_model: str = 'svm'):
         self.device = device
         self.sample_rate = max(1, int(sample_rate))
-        self.batch_timeout = float(batch_timeout) if batch_timeout else None
         self.face_model = face_model
         self.au_model = au_model
         self._init_error: Optional[str] = None
@@ -572,60 +487,64 @@ class PyFeatAnalyzer:
                     feat['timestamp'] = frame_idx / fps
                     per_frame_records.append(feat)
 
-        self._patch_sklearn_compat()
+        # Determine frame width for multi-face selection from first frame
+        frame_width = self.MAX_FRAME_EDGE
+        cap_probe = cv2.VideoCapture(video_path)
+        if cap_probe.isOpened():
+            ret, probe_frame = cap_probe.read()
+            if ret and probe_frame is not None:
+                frame_width = probe_frame.shape[1]
+        cap_probe.release()
+
+        # Suppress noisy per-frame warnings from Py-Feat
+        feat_logger = logging.getLogger('feat')
+        prev_level = feat_logger.level
+        feat_logger.setLevel(logging.ERROR)
+
+        n_total = len(frame_indices)
+        n_detected = 0
+
         try:
-            for batch_num, batch in enumerate(self._batched_frames(video_path, frame_indices, self.BATCH_SIZE)):
+            for batch in self._batched_frames(video_path, frame_indices, 1):
                 if not batch:
                     continue
+                frame_idx, rgb_frame = batch[0]
 
-                batch_frame_idx_list = [fidx for fidx, _ in batch]
-
-                temp_dir = tempfile.TemporaryDirectory(prefix="pyfeat_batch_")
+                # Save frame as JPG to temp file
+                temp_dir = tempfile.mkdtemp(prefix="pyfeat_frame_")
+                frame_path = Path(temp_dir) / f"frame_{frame_idx:06d}.jpg"
                 try:
-                    image_paths: List[str] = []
-                    for frame_idx, rgb_frame in batch:
-                        frame_path = Path(temp_dir.name) / f"frame_{frame_idx:06d}_{batch_num:03d}.png"
-                        bgr_frame = cv2.cvtColor(rgb_frame, cv2.COLOR_RGB2BGR)
-                        if not cv2.imwrite(str(frame_path), bgr_frame):
-                            continue
-                        image_paths.append(str(frame_path))
+                    bgr_frame = cv2.cvtColor(rgb_frame, cv2.COLOR_RGB2BGR)
+                    # Resize if needed
+                    h, w = bgr_frame.shape[:2]
+                    max_dim = max(h, w)
+                    if max_dim > self.MAX_FRAME_EDGE:
+                        scale = self.MAX_FRAME_EDGE / float(max_dim)
+                        bgr_frame = cv2.resize(bgr_frame, (max(1, int(w * scale)), max(1, int(h * scale))),
+                                               interpolation=cv2.INTER_AREA)
 
-                    if not image_paths:
+                    if not cv2.imwrite(str(frame_path), bgr_frame):
                         continue
 
-                    # Run detection in a subprocess so it can be killed on timeout.
-                    # detect_images() can block in C/PyTorch code that ignores signals.
-                    pool = multiprocessing.Pool(1)
-                    try:
-                        async_result = pool.apply_async(_run_detect_images, (image_paths, self.face_model, self.au_model))
-                        try:
-                            serialized = async_result.get(timeout=self.batch_timeout)
-                        except multiprocessing.TimeoutError:
-                            logger.warning(
-                                "Py-Feat: batch %d timed out after %ds (frames %s), skipping batch",
-                                batch_num, int(self.batch_timeout), batch_frame_idx_list,
-                            )
-                            pool.terminate()
-                            pool.join()
-                            continue
-                    finally:
-                        pool.terminate()
-                        pool.join()
+                    # Direct detection — no subprocess
+                    result = detector.detect_image(str(frame_path))
+                    df = result.to_pandas() if hasattr(result, 'to_pandas') else result
 
-                    # Deserialise the subprocess result and feed into update_stats
-                    if serialized is not None:
-                        for records in serialized:
-                            if records:
-                                df = pd.DataFrame(records)
-                                # Figure out which frame indices this chunk covers
-                                chunk_len = len(df)
-                                chunk_indices = batch_frame_idx_list[:chunk_len]
-                                update_stats(df, chunk_indices)
+                    if df is not None and len(df) > 0:
+                        df = _select_central_face(df, frame_width)
+                        update_stats(df, [frame_idx])
+                        n_detected += 1
 
+                except Exception as e:
+                    logger.debug("Py-Feat: frame %d failed: %s", frame_idx, e)
                 finally:
-                    temp_dir.cleanup()
+                    shutil.rmtree(temp_dir, ignore_errors=True)
+
+                if (frame_idx + 1) % 50 == 0 or frame_idx == frame_indices[-1]:
+                    logger.info("Py-Feat: processed %d/%d frames (%d faces detected)",
+                                frame_indices.index(frame_idx) + 1, n_total, n_detected)
         finally:
-            self._restore_sklearn_dtype()
+            feat_logger.setLevel(prev_level)
 
         aggregated = self._finalize_means(totals, counts)
         # If aggregation produced no stats, warn once at the video level so it's clear

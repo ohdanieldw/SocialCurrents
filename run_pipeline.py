@@ -358,12 +358,6 @@ def main() -> None:
         help="Process every Nth video frame for Py-Feat (default: 5, i.e. 5 Hz at 25 fps)",
     )
     parser.add_argument(
-        "--pyfeat-batch-timeout",
-        type=float,
-        default=30,
-        help="Seconds before a Py-Feat batch is killed and skipped (default: 30)",
-    )
-    parser.add_argument(
         "--pyfeat-face-model",
         default="mtcnn",
         help="Face detection model for Py-Feat: mtcnn, retinaface, img2pose (default: mtcnn)",
@@ -435,7 +429,6 @@ def main() -> None:
             decimal_places=args.decimal_places,
             overwrite=args.overwrite,
             pyfeat_sample_rate=args.pyfeat_sample_rate,
-            pyfeat_batch_timeout=args.pyfeat_batch_timeout,
             pyfeat_face_model=args.pyfeat_face_model,
             pyfeat_au_model=args.pyfeat_au_model,
         )

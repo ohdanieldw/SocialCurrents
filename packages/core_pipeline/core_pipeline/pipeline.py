@@ -31,7 +31,6 @@ class MultimodalPipeline:
         decimal_places: int = 3,
         overwrite: bool = False,
         pyfeat_sample_rate: int = 5,
-        pyfeat_batch_timeout: float = 30,
         pyfeat_face_model: str = 'mtcnn',
         pyfeat_au_model: str = 'svm',
     ):
@@ -44,14 +43,12 @@ class MultimodalPipeline:
             device: Device to run models on ("cpu" or "cuda")
             keep_per_frame: Keep per-frame sequence outputs for supported models
             pyfeat_sample_rate: Process every Nth frame for Py-Feat (default: 5)
-            pyfeat_batch_timeout: Seconds before a Py-Feat batch is killed (default: 30)
         """
         self.device = device
         self.keep_per_frame = bool(keep_per_frame)
         self.decimal_places = int(decimal_places)
         self.overwrite = bool(overwrite)
         self.pyfeat_sample_rate = int(pyfeat_sample_rate)
-        self.pyfeat_batch_timeout = float(pyfeat_batch_timeout)
         self.pyfeat_face_model = str(pyfeat_face_model)
         self.pyfeat_au_model = str(pyfeat_au_model)
         self._tracker: list = []
@@ -308,7 +305,6 @@ class MultimodalPipeline:
                     self.extractors[feature_name] = PyFeatAnalyzer(
                         device=self.device,
                         sample_rate=self.pyfeat_sample_rate,
-                        batch_timeout=self.pyfeat_batch_timeout,
                         face_model=self.pyfeat_face_model,
                         au_model=self.pyfeat_au_model,
                     )

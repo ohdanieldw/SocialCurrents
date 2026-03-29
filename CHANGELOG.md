@@ -21,7 +21,6 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Per-subject log files (`{prefix}.log`) inside each subject folder
 - Py-Feat configuration flags:
   - `--pyfeat-sample-rate` (default: 5) — process every Nth frame
-  - `--pyfeat-batch-timeout` (default: 30s) — kill and skip stuck batches
   - `--pyfeat-face-model` (default: `mtcnn`) — face detector selection
   - `--pyfeat-au-model` (default: `svm`) — action unit model selection
 - Multi-face selection: when multiple faces detected, keeps the face closest to the horizontal center of the frame (suits lab setups with centrally-seated participants)
