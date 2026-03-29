@@ -154,6 +154,7 @@ All the flags you can pass to `run_macos.sh` (or `python run_pipeline.py`), expl
 | `--pyfeat-sample-rate 5` | **How often to measure facial expressions.** See [Facial expression extraction](#facial-expression-extraction-py-feat) below. |
 | `--pyfeat-batch-timeout 30` | **Give up on stuck facial analysis.** See [Facial expression extraction](#facial-expression-extraction-py-feat) below. |
 | `--pyfeat-face-model mtcnn` | **Which face detector to use.** See [Facial expression extraction](#facial-expression-extraction-py-feat) below. |
+| `--pyfeat-au-model svm` | **Which action unit model to use.** `svm` (default, fast) or `xgb` (may hang on some systems). See [Facial expression extraction](#facial-expression-extraction-py-feat) below. |
 
 ## Feature extractors
 
@@ -244,6 +245,19 @@ bash run_macos.sh -i data/ -f pyfeat_vision --pyfeat-sample-rate 2
 # Analyze fewer frames (faster, good for long videos)
 bash run_macos.sh -i data/ -f pyfeat_vision --pyfeat-sample-rate 10
 ```
+
+### Action unit model (`--pyfeat-au-model`)
+
+The AU model is the algorithm that measures how much each facial muscle group is activated. Two options are available:
+
+| Option | When to use it |
+|---|---|
+| **`svm`** (default) | Fast and reliable. Completes in about 4 seconds per frame on a laptop CPU. Recommended for all standard use. |
+| `xgb` | An alternative model. May produce slightly different AU intensity values but is known to hang on some systems. Only use if you have a specific reason. |
+
+### Multiple faces
+
+When more than one face appears in a frame (e.g., in a group recording or when someone walks behind the participant), the pipeline automatically selects the face closest to the horizontal center of the frame. This works well for standard lab setups where the target participant is seated centrally in their camera view. No configuration is needed.
 
 ### Batch timeout (`--pyfeat-batch-timeout`)
 

@@ -48,7 +48,9 @@ WhisperX speaker diarization requires:
 
 ### CPU-only limitations
 These extractors are too slow without GPU and should generally be skipped on CPU-only machines (use `--skip-slow` or exclude via `-f`):
-`pyfeat_vision`, `facer_vision`, `optical_flow_vision`, `avhubert_vision`, `rife_vision`, `fact_vision`, `video_frames_vision`
+`facer_vision`, `optical_flow_vision`, `avhubert_vision`, `rife_vision`, `fact_vision`, `video_frames_vision`
+
+Note: `pyfeat_vision` now runs efficiently on CPU thanks to every-Nth-frame sampling (`--pyfeat-sample-rate`, default 5) and per-batch subprocess timeouts (`--pyfeat-batch-timeout`, default 30s).
 
 ## Environment
 

@@ -133,6 +133,7 @@ usage: python run_pipeline.py [-h] [-i INPUT] [-o OUTPUT_DIR] [-f FEATURES]
                               [--normalize-fps] [--is-audio]
                               [--log-file LOG_FILE] [--decimal-places N]
                               [--pyfeat-sample-rate N] [--pyfeat-batch-timeout S]
+                              [--pyfeat-face-model MODEL] [--pyfeat-au-model MODEL]
                               [--check-dependencies]
 ```
 
@@ -148,6 +149,10 @@ usage: python run_pipeline.py [-h] [-i INPUT] [-o OUTPUT_DIR] [-f FEATURES]
 | `--normalize-fps` | `False` | Re-encode input videos to constant 25 fps via ffmpeg before processing |
 | `--pyfeat-sample-rate` | `5` | Process every Nth video frame for Py-Feat (5 = 5 Hz at 25 fps) |
 | `--pyfeat-batch-timeout` | `30` | Seconds before a Py-Feat batch is killed and skipped |
+| `--pyfeat-face-model` | `mtcnn` | Face detection model for Py-Feat: `mtcnn`, `retinaface`, `img2pose` |
+| `--pyfeat-au-model` | `svm` | Action unit model for Py-Feat: `svm` (fast) or `xgb` |
+| `--skip-slow` | `False` | Exclude CPU-prohibitive extractors (`s2t_speech_to_text`, `xlsr_speech_to_text`, `elmo_text`) |
+| `--decimal-places` | `3` | Number of decimal places for float values in CSV output |
 | `--check-dependencies` | — | Check whether required Python packages are installed, then exit |
 
 ### Supported input formats
