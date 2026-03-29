@@ -8,7 +8,6 @@ SocialCurrents is a multimodal feature extraction and analysis toolkit for socia
 
 ## Table of contents
 
-- [What it measures](#what-it-measures)
 - [Requirements](#requirements)
 - [Installation](#installation)
 - [Quick start](#quick-start)
@@ -26,14 +25,7 @@ SocialCurrents is a multimodal feature extraction and analysis toolkit for socia
 - [Funding](#funding)
 - [Citation](#citation)
 
-## What it measures
-
-| Modality | What you get |
-|---|---|
-| **Body movement** | 33 pose landmarks per frame (MediaPipe), joint velocities, movement magnitude |
-| **Facial expression** | Action units (AU1–AU28), valence/arousal, discrete emotion probabilities (Py-Feat, EmotiEffNet) |
-| **Speech** | Pitch, volume, spectral features (librosa, openSMILE); speech emotion recognition |
-| **Language** | Transcript (WhisperX with speaker diarization), sentiment, semantic similarity, NLI benchmarks |
+**Extracted features** span four modalities: body movement (33 pose landmarks per frame), facial expression (action units, valence/arousal, emotion probabilities), speech (pitch, volume, spectral features, emotion recognition), and language (transcription with speaker diarization, sentiment, semantic similarity).
 
 ## Requirements
 
@@ -470,21 +462,34 @@ If facial analysis fails on a particular frame (e.g., heavy occlusion, unusual l
 
 ## Analysis toolkit
 
-SocialCurrents includes four analysis tools that take the extracted features and produce publication-ready results. Each tool is a standalone script with flexible options for different research designs.
+After extracting features with `extract.py`, SocialCurrents provides five analysis tools that produce publication-ready results. Each is a standalone script that can be used independently or combined.
 
 ### Workflow
 
-The four tools can be used in any order or combination depending on your research question. Start with `describe.py` to understand your data, then pick the tools that match your question:
+```
+extract.py              Extracts features from video → timeseries CSV
+    |
+    v
+describe.py             Summarizes and visualizes extracted features
+    |
+    v
+correlate.py            Relates features to ratings, physiology, or neural data
+segment.py              Discovers conversational states (HMM, changepoint, k-means)
+synchronize.py          Measures interpersonal coordination between partners
+link_state_outcomes.py  Links conversational states to external signals
+```
+
+The tools after `describe.py` can be used in any order or combination depending on your research question:
 
 | Research question | Tools to use |
 |---|---|
 | "What do my features look like?" | `describe.py` |
-| "Do features predict trait ratings?" | `describe.py` then `correlate.py` |
-| "What are the conversation phases?" | `describe.py` then `segment.py` |
-| "Are partners behaviorally coordinated?" | `describe.py` then `synchronize.py` |
-| "Do conversational states predict impression change?" | `segment.py` then `correlate.py` (use segment output as input) |
+| "Do features predict trait ratings?" | `correlate.py` |
+| "What are the conversation phases?" | `segment.py` |
+| "Are partners behaviorally coordinated?" | `synchronize.py` |
+| "Do conversational states predict impression change?" | `segment.py` then `link_state_outcomes.py` |
 | "Does interpersonal synchrony predict liking?" | `synchronize.py` then `correlate.py` |
-| "Full analysis pipeline" | `describe.py` then all three |
+| "Full analysis" | `describe.py` then all four |
 
 ### Using the analysis tools standalone
 
@@ -576,6 +581,19 @@ python analysis/synchronize.py \
   --methods pearson,crosscorr,rqa,granger,coherence \
   --reduce-features grouped --window-size 30 \
   -o results/dyad005_synchrony/
+```
+
+### `link_state_outcomes.py` -- Link States to Outcomes
+
+After segmenting a conversation with `segment.py`, use this tool to test whether different behavioral states are associated with different levels of an external signal -- for example, "are trustworthiness ratings higher during animated states than quiet states?" Computes per-state means with 95% CIs, pairwise Mann-Whitney U tests (FDR-corrected) with Cohen's d effect sizes, and produces a two-panel figure: boxplot of signal by state with significance brackets, plus a timeline showing the state sequence with the signal overlaid.
+
+```bash
+python analysis/link_state_outcomes.py \
+  --states results/sub010_segments/segments.csv \
+  --signal data/Trait/Trustworthiness/sub009rating.csv \
+  --signal-col Value --signal-label Trustworthiness \
+  --rater sub009 --target sub010 \
+  -o results/sub010_state_outcomes/
 ```
 
 ### Why this toolkit
