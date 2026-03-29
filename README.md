@@ -22,6 +22,7 @@ SocialCurrents is a multimodal feature extraction and analysis toolkit for socia
 - [Optional & heavy features](#optional--heavy-features)
 - [Environment variables](#environment-variables)
 - [Troubleshooting](#troubleshooting)
+- [References](#references)
 - [Funding](#funding)
 - [Citation](#citation)
 
@@ -284,7 +285,7 @@ Detailed output keys for every extractor. Temporality indicates whether a featur
 
 #### `basic_audio` -- Volume & Pitch (`oc_`)
 
-Time-varying arrays at ~31 samples/sec, resampled to video frame rate.
+Audio feature extraction via librosa (McFee et al., 2015). Time-varying arrays at ~31 samples/sec, resampled to video frame rate.
 
 | Key | Description |
 |---|---|
@@ -295,7 +296,7 @@ Time-varying arrays at ~31 samples/sec, resampled to video frame rate.
 
 #### `librosa_spectral` -- Spectral & Rhythm (`lbrs_`)
 
-Time-varying arrays resampled to video frame rate. `lbrs_tempo` and `lbrs_*_singlevalue` are scalars.
+Computed via librosa (McFee et al., 2015). Time-varying arrays resampled to video frame rate. `lbrs_tempo` and `lbrs_*_singlevalue` are scalars.
 
 | Key | Description |
 |---|---|
@@ -310,7 +311,7 @@ Time-varying arrays resampled to video frame rate. `lbrs_tempo` and `lbrs_*_sing
 
 #### `opensmile` -- Low-Level Descriptors (~1,512 features, `osm_`)
 
-LLD keys (`osm_*_sma`) are time-varying; functional keys (`osm_*_mean`, `osm_*_stddev`, etc.) are scalars.
+openSMILE ComParE_2016 and eGeMAPSv02 feature sets (Eyben et al., 2010). LLD keys (`osm_*_sma`) are time-varying; functional keys (`osm_*_mean`, `osm_*_stddev`, etc.) are scalars.
 
 Key time-varying outputs: `osm_pcm_RMSenergy_sma`, `osm_loudness_sma`, `osm_F0final_sma`, `osm_voicingProb_sma`, `osm_jitterLocal_sma`, `osm_shimmerLocal_sma`, `osm_logHNR_sma`, `osm_mfcc1_sma`...`osm_mfcc12_sma`, `osm_spectralCentroid_sma`, `osm_spectralFlux_sma`, `osm_spectralRollOff25_sma`...`osm_spectralRollOff90_sma`, `osm_lsf1`...`osm_lsf8`.
 
@@ -326,7 +327,7 @@ Static scalars (probabilities summing to 1.0): `ser_neutral`, `ser_calm`, `ser_h
 
 #### `whisperx_transcription` -- Transcription & Diarization (`WhX_`)
 
-Requires `HF_TOKEN` for speaker diarization. Static (full-recording transcript broadcast to all rows).
+WhisperX builds on Whisper (Radford et al., 2023) with forced alignment and speaker diarization. Requires `HF_TOKEN` for speaker diarization. Static (full-recording transcript broadcast to all rows).
 
 | Key | Description |
 |---|---|
@@ -364,7 +365,7 @@ Dialogue-level emotion: `MELD_num_utterances`, `MELD_num_speakers`, `MELD_count_
 
 #### `mediapipe_pose_vision` -- 33 Pose Landmarks (`GMP_`)
 
-Time-varying -- processes every video frame. 33 body landmarks, each with 10 attributes (330+ features):
+Google MediaPipe PoseLandmarker (Lugaresi et al., 2019). Time-varying -- processes every video frame. 33 body landmarks, each with 10 attributes (330+ features):
 
 | Attribute group | Keys | Description |
 |---|---|---|
@@ -377,7 +378,7 @@ Landmark mapping (1-indexed): 1=Nose, 12=Left shoulder, 13=Right shoulder, 14=Le
 
 #### `pyfeat_vision` -- Facial Expression Analysis (`pf_`)
 
-Time-varying -- samples every Nth frame (default N=5), interpolated to all rows. 37 features:
+Py-Feat (Cheong et al., 2023). Time-varying -- samples every Nth frame (default N=5), interpolated to all rows. 37 features:
 
 | Group | Keys | Description |
 |---|---|---|
@@ -524,7 +525,7 @@ python analysis/describe.py -f output/test_full5/ -o results/descriptives_all/
 
 ### `correlate.py` -- Relate Features to Outcomes
 
-Computes lagged cross-correlation between extracted behavioral features and external target signals. **Single mode** correlates features with a dynamic rating timeseries (e.g., continuous trustworthiness judgments from a slider task), a physiological signal, or any continuous measure -- with adjustable lag range to capture reaction time in ratings. **Multi mode** correlates features with multi-channel neural data (EEG, fNIRS, multi-voxel patterns), supporting PCA, Factor Analysis, ICA, CCA, and ROI-based reduction of target channels. All modes include Benjamini-Hochberg FDR correction and flexible dimensionality reduction (`pca`, `fa`, `ica`, `grouped`, `every`, or `all` to run all methods and compare).
+Computes lagged cross-correlation between extracted behavioral features and external target signals. **Single mode** correlates features with a dynamic rating timeseries (e.g., continuous trustworthiness judgments from a slider task), a physiological signal, or any continuous measure -- with adjustable lag range to capture the typical 2-5 second perceptual delay in continuous ratings. **Multi mode** correlates features with multi-channel neural data (EEG, fNIRS, multi-voxel patterns), supporting PCA, Factor Analysis, ICA, CCA, and ROI-based reduction of target channels. All modes include Benjamini-Hochberg FDR correction and flexible dimensionality reduction (`pca`, `fa`, `ica`, `grouped`, `every`, or `all` to run all methods and compare).
 
 ```bash
 # Single: behavioral features vs. trustworthiness rating
@@ -545,7 +546,7 @@ python analysis/correlate.py --mode multi \
 
 ### `segment.py` -- Discover Conversational States
 
-Segments a conversation into distinct behavioral states using Hidden Markov Models (HMM), changepoint detection, or windowed k-means clustering. When set to `auto`, the number of states is selected via BIC/AIC model comparison. States are automatically sorted by overall energy level (State 1 = quietest, State N = most animated) so they are comparable across subjects. Output includes state profiles showing what each state "looks like" across feature dimensions, transition probability matrices, per-visit duration statistics, and a color-coded state timeline. Directly links to impression rating analysis -- e.g., "which conversational states predict changes in perceived trustworthiness?"
+Segments a conversation into distinct behavioral states using Hidden Markov Models (Rabiner, 1989), changepoint detection, or windowed k-means clustering. When set to `auto`, the number of states is selected via BIC/AIC model comparison. States are automatically sorted by overall energy level (State 1 = quietest, State N = most animated) so they are comparable across subjects. Output includes state profiles showing what each state "looks like" across feature dimensions, transition probability matrices, per-visit duration statistics, and a color-coded state timeline. Directly links to impression rating analysis -- e.g., "which conversational states predict changes in perceived trustworthiness?"
 
 ```bash
 python analysis/segment.py \
@@ -557,14 +558,14 @@ python analysis/segment.py \
 
 ### `synchronize.py` -- Measure Interpersonal Coordination
 
-Implements 10 synchrony methods spanning the full literature on interpersonal coordination, from basic windowed correlation to nonlinear dynamics and directional causality models.
+Implements 10 synchrony methods spanning the full literature on interpersonal coordination (see Mayo & Gordon, 2020 for a review), from basic windowed correlation to nonlinear dynamics and directional causality models.
 
-| Category | Methods |
-|---|---|
-| **Time-domain** | Rolling Pearson, windowed cross-correlation, Lin's concordance |
-| **Nonlinear dynamics** | Cross-recurrence quantification (RQA), detrended cross-correlation (DCCA) |
-| **Frequency-domain** | Spectral coherence, wavelet coherence |
-| **Directionality** | Granger causality, transfer entropy, coupled oscillator models |
+| Category | Methods | Key references |
+|---|---|---|
+| **Time-domain** | Rolling Pearson, windowed cross-correlation, Lin's concordance | |
+| **Nonlinear dynamics** | Cross-recurrence quantification (RQA), detrended cross-correlation (DCCA) | Zbilut & Webber, 1992; Coco & Dale, 2014 |
+| **Frequency-domain** | Spectral coherence, wavelet coherence | Grinsted et al., 2004 |
+| **Directionality** | Granger causality, transfer entropy, coupled oscillator models | Granger, 1969; Schreiber, 2000; Ferrer & Helm, 2013 |
 
 All methods support lagged analysis and permutation-based surrogate testing for statistical validity. Directional methods report leader-follower dynamics and how leadership shifts over the conversation. Select any subset of methods via `--methods` or run all at once.
 
@@ -643,6 +644,34 @@ If you use SocialCurrents in published research, please cite:
 ## Acknowledgments
 
 Initial pipeline scaffolding by Kenneth Dao; testing and debugging by Shuo Duan. All subsequent development, integration, and testing by Daniel DongWon Oh.
+
+## References
+
+Cheong, J. H., Xie, T., Byrne, S., & Chang, L. J. (2023). Py-Feat: Python Facial Expression Analysis Toolbox. *Affective Science*, *4*, 781-796. https://doi.org/10.1007/s42761-023-00191-4
+
+Coco, M. I., & Dale, R. (2014). Cross-recurrence quantification analysis of categorical and continuous time series: An R package. *Frontiers in Psychology*, *5*, 510. https://doi.org/10.3389/fpsyg.2014.00510
+
+Eyben, F., Wollmer, M., & Schuller, B. (2010). openSMILE: The Munich versatile and fast open-source audio feature extractor. *Proceedings of ACM Multimedia*, 1459-1462. https://doi.org/10.1145/1873951.1874246
+
+Ferrer, E., & Helm, J. L. (2013). Dynamical systems modeling of physiological coregulation in dyadic interactions. *International Journal of Psychophysiology*, *88*(3), 296-308. https://doi.org/10.1016/j.ijpsycho.2012.10.013
+
+Granger, C. W. J. (1969). Investigating causal relations by econometric models and cross-spectral methods. *Econometrica*, *37*(3), 424-438. https://doi.org/10.2307/1912791
+
+Grinsted, A., Moore, J. C., & Jevrejeva, S. (2004). Application of the cross wavelet transform and wavelet coherence to geophysical time series. *Nonlinear Processes in Geophysics*, *11*(5/6), 561-566. https://doi.org/10.5194/npg-11-561-2004
+
+Lugaresi, C., Tang, J., Nash, H., McClanahan, C., Uboweja, E., Hays, M., ... & Grundmann, M. (2019). MediaPipe: A framework for building perception pipelines. *arXiv:1906.08172*. https://doi.org/10.48550/arXiv.1906.08172
+
+Mayo, O., & Gordon, I. (2020). In and out of synchrony: Behavioral and physiological dynamics of dyadic interpersonal coordination. *Psychophysiology*, *57*(6), e13574. https://doi.org/10.1111/psyp.13574
+
+McFee, B., Raffel, C., Liang, D., Ellis, D. P., McVicar, M., Battenberg, E., & Nieto, O. (2015). librosa: Audio and music signal analysis in Python. *Proceedings of the 14th Python in Science Conference*, 18-25. https://doi.org/10.25080/Majora-7b98e3ed-003
+
+Rabiner, L. R. (1989). A tutorial on hidden Markov models and selected applications in speech recognition. *Proceedings of the IEEE*, *77*(2), 257-286. https://doi.org/10.1109/5.18626
+
+Radford, A., Kim, J. W., Xu, T., Brockman, G., McLeavey, C., & Sutskever, I. (2023). Robust speech recognition via large-scale weak supervision. *Proceedings of ICML*, 28492-28518. https://doi.org/10.48550/arXiv.2212.04356
+
+Schreiber, T. (2000). Measuring information transfer. *Physical Review Letters*, *85*(2), 461-464. https://doi.org/10.1103/PhysRevLett.85.461
+
+Zbilut, J. P., & Webber, C. L. (1992). Embeddings and delays as derived from quantification of recurrence plots. *Physics Letters A*, *171*(3-4), 199-203. https://doi.org/10.1016/0375-9601(92)90426-M
 
 ## License
 
