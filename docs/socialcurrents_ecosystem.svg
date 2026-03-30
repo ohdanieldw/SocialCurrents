@@ -41,13 +41,13 @@
 <line x1="393" y1="442" x2="393" y2="510" class="arr" marker-end="url(#arrow)"/>
 <line x1="370" y1="74" x2="430" y2="510" class="arr" marker-end="url(#arrow)"/>
 <g class="c-purple"><rect x="328" y="512" width="130" height="44" rx="8" stroke-width="0.5"/><text class="th" x="393" y="534" text-anchor="middle" dominant-baseline="central">map_states.py</text></g>
-<g class="c-teal"><rect x="328" y="568" width="130" height="34" rx="8" stroke-width="0.5"/><text class="ts" x="393" y="585" text-anchor="middle" dominant-baseline="central">state outcomes</text></g>
-<line x1="160" y1="264" x2="490" y2="352" class="arr" marker-end="url(#arrow)"/>
+<g class="c-teal"><rect x="328" y="568" width="130" height="34" rx="8" stroke-width="0.5"/><text class="ts" x="393" y="585" text-anchor="middle" dominant-baseline="central">state links to signals</text></g>
+<line x1="160" y1="282" x2="490" y2="352" class="arr" marker-end="url(#arrow)"/>
 <line x1="540" y1="282" x2="530" y2="352" class="arr" marker-end="url(#arrow)"/>
 <g class="c-purple"><rect x="488" y="352" width="172" height="44" rx="8" stroke-width="0.5"/><text class="th" x="574" y="374" text-anchor="middle" dominant-baseline="central">synchronize.py</text></g>
 <g class="c-teal"><rect x="488" y="408" width="172" height="34" rx="8" stroke-width="0.5"/><text class="ts" x="574" y="425" text-anchor="middle" dominant-baseline="central">10 synchrony methods</text></g>
-<text class="ts" x="20" y="462" font-weight="500">Legend</text>
-<g class="c-purple"><rect x="20" y="474" width="90" height="26" rx="6" stroke-width="0.5"/><text class="ts" x="65" y="487" text-anchor="middle" dominant-baseline="central">script</text></g>
-<g class="c-teal"><rect x="20" y="506" width="90" height="26" rx="6" stroke-width="0.5"/><text class="ts" x="65" y="519" text-anchor="middle" dominant-baseline="central">output</text></g>
-<g class="c-gray"><rect x="20" y="538" width="90" height="26" rx="6" stroke-width="0.5"/><text class="ts" x="65" y="551" text-anchor="middle" dominant-baseline="central">input data</text></g>
+<text class="ts" x="20" y="500" font-weight="500">Legend</text>
+<g class="c-purple"><rect x="20" y="512" width="90" height="26" rx="6" stroke-width="0.5"/><text class="ts" x="65" y="525" text-anchor="middle" dominant-baseline="central">script</text></g>
+<g class="c-teal"><rect x="20" y="544" width="90" height="26" rx="6" stroke-width="0.5"/><text class="ts" x="65" y="557" text-anchor="middle" dominant-baseline="central">output</text></g>
+<g class="c-gray"><rect x="20" y="576" width="90" height="26" rx="6" stroke-width="0.5"/><text class="ts" x="65" y="589" text-anchor="middle" dominant-baseline="central">input data</text></g>
 </svg>
