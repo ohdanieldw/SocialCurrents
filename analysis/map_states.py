@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Link HMM state sequences to continuous external signals.
+Map behavioral states (from segment.py) to continuous external signals.
 
 Answers: "which behavioral states are associated with higher/lower
 signal values (e.g., trustworthiness ratings, heart rate, fNIRS)?"
@@ -34,7 +34,7 @@ from analysis.utils import (
 
 def parse_args(argv=None):
     p = argparse.ArgumentParser(
-        description="Link behavioral states (from segment.py) to continuous signals"
+        description="Map behavioral states (from segment.py) to continuous signals"
     )
     p.add_argument("--states", required=True,
                    help="Path to segment.py segments.csv (must have time_seconds and state columns)")
@@ -250,7 +250,7 @@ def main():
     prefix = f"{args.rater}_rates_{args.target}_" if args.rater and args.target else ""
 
     # Check overwrite
-    summary_path = out_dir / f"{prefix}state_outcomes_summary.csv"
+    summary_path = out_dir / f"{prefix}map_states_summary.csv"
     if not args.overwrite and summary_path.exists():
         print(f"  Already exists: {summary_path}")
         print("  Skipping (use --overwrite to replace)")
@@ -308,13 +308,13 @@ def main():
     }
     write_csv_with_header(summary, summary_path, header)
 
-    pairwise_path = out_dir / f"{prefix}state_outcomes_pairwise.csv"
+    pairwise_path = out_dir / f"{prefix}map_states_pairwise.csv"
     pairwise.to_csv(pairwise_path, index=False, float_format="%.6f")
     print(f"  Saved: {pairwise_path} ({len(pairwise)} pairs)")
 
     # Plot
     print("\nGenerating plot...")
-    plot_path = out_dir / f"{prefix}state_outcomes_plot.png"
+    plot_path = out_dir / f"{prefix}map_states_plot.png"
     plot_state_outcomes(binned_states, signal_series, summary, pairwise,
                         args.signal_label, plot_path)
 

@@ -5,6 +5,8 @@ Conversation segmentation using latent state models.
 Segments a conversation into distinct behavioral states based on
 multimodal timeseries features.  Supports Hidden Markov Models (HMM),
 changepoint detection, and windowed k-means clustering.
+
+Supports single-subject and batch modes.
 """
 
 import argparse
@@ -44,6 +46,12 @@ try:
 except ImportError:
     HAS_RUPTURES = False
 
+try:
+    from kneed import KneeLocator
+    HAS_KNEED = True
+except ImportError:
+    HAS_KNEED = False
+
 
 # ---------------------------------------------------------------------------
 # CLI
@@ -54,7 +62,7 @@ def parse_args(argv=None):
         description="Segment a conversation into behavioral states"
     )
     p.add_argument("-f", "--features", required=True,
-                   help="Path to timeseries_features.csv")
+                   help="Path to timeseries_features.csv or directory (batch mode)")
     p.add_argument("-o", "--output-dir", default="./analysis_output",
                    help="Output directory (default: ./analysis_output)")
     p.add_argument("--method", choices=["hmm", "changepoint", "kmeans-window"],
@@ -65,6 +73,9 @@ def parse_args(argv=None):
                    help="Min states to test when auto (default: 2)")
     p.add_argument("--max-states", type=int, default=10,
                    help="Max states to test when auto (default: 10)")
+    p.add_argument("--state-selection", choices=["min", "elbow"], default="elbow",
+                   help="State selection criterion: 'min' = lowest BIC (default), "
+                        "'elbow' = kneedle elbow detection on BIC curve")
     p.add_argument("--reduce-features",
                    choices=["pca", "fa", "ica", "grouped", "every", "all"],
                    default="pca", help="Feature reduction (default: pca)")
@@ -182,6 +193,54 @@ def _fit_hmm(data, n_states, n_restarts, covariance_type, seed):
     return best_model, best_ll
 
 
+def _find_bic_kneedle(selection_df):
+    """Find elbow in BIC curve using the kneedle algorithm.
+
+    Uses the kneed package if available, otherwise falls back to the
+    geometric max-distance method: normalize k and BIC to [0,1], then
+    find the point with maximum perpendicular distance from the line
+    connecting the first and last points.
+
+    Returns (selected_k, method_label) or (None, None) if detection fails.
+    """
+    df = selection_df.sort_values("n_states").reset_index(drop=True)
+    if len(df) < 3:
+        return None, None
+
+    k_vals = df["n_states"].values.astype(float)
+    bic_vals = df["BIC"].values
+
+    # Try kneed package first
+    if HAS_KNEED:
+        kl = KneeLocator(k_vals, bic_vals, curve="convex", direction="decreasing")
+        if kl.knee is not None:
+            return int(kl.knee), "elbow_kneedle"
+
+    # Geometric distance fallback
+    k_range = k_vals[-1] - k_vals[0]
+    bic_range = bic_vals.max() - bic_vals.min()
+    if k_range <= 0 or bic_range <= 0:
+        return None, None
+
+    # Normalize to [0,1]
+    k_norm = (k_vals - k_vals[0]) / k_range
+    bic_norm = (bic_vals - bic_vals.min()) / bic_range
+
+    # Line from first point to last point
+    x0, y0 = k_norm[0], bic_norm[0]
+    x1, y1 = k_norm[-1], bic_norm[-1]
+
+    # Perpendicular distance from each point to the line
+    line_len = np.sqrt((x1 - x0) ** 2 + (y1 - y0) ** 2)
+    if line_len == 0:
+        return None, None
+
+    distances = np.abs((y1 - y0) * k_norm - (x1 - x0) * bic_norm + x1 * y0 - y1 * x0) / line_len
+
+    best_idx = np.argmax(distances)
+    return int(k_vals[best_idx]), "elbow_geometric"
+
+
 def run_hmm(data, args):
     """Run HMM segmentation. Returns (states, probs, model, selection_df|None)."""
     if not HAS_HMMLEARN:
@@ -211,10 +270,25 @@ def run_hmm(data, args):
                 best_n = n
 
         selection_df = pd.DataFrame(records)
-        n_states = best_n
-        print(f"  Selected: {n_states} states (BIC={best_bic:.1f})")
+
+        if args.state_selection == "elbow":
+            elbow_n, elbow_method = _find_bic_kneedle(selection_df)
+            if elbow_n is not None:
+                n_states = elbow_n
+                sel_bic = float(selection_df.loc[selection_df["n_states"] == elbow_n, "BIC"].values[0])
+                selection_method = elbow_method
+                print(f"  Selected: {n_states} states ({elbow_method}, BIC={sel_bic:.1f})")
+            else:
+                n_states = best_n
+                selection_method = "elbow_fallback_min"
+                print(f"  Selected: {n_states} states (argmin BIC={best_bic:.1f}, elbow detection failed)")
+        else:
+            n_states = best_n
+            selection_method = "min_bic"
+            print(f"  Selected: {n_states} states (min BIC={best_bic:.1f})")
     else:
         n_states = int(args.n_states)
+        selection_method = "fixed"
 
     print(f"\nFitting final HMM with {n_states} states...")
     model, ll = _fit_hmm(data, n_states, args.n_restarts, args.covariance_type, args.seed)
@@ -225,7 +299,7 @@ def run_hmm(data, args):
     probs = model.predict_proba(data)
     print(f"  Log-likelihood: {ll:.1f}")
 
-    return states, probs, model, selection_df
+    return states, probs, model, selection_df, selection_method
 
 
 # ---------------------------------------------------------------------------
@@ -532,7 +606,7 @@ def plot_state_distributions(states, data, col_names, output_path):
 # ---------------------------------------------------------------------------
 
 def write_summary_report(path, args, states, profiles_df, trans_df, durations_df,
-                         selection_df=None):
+                         selection_df=None, selection_method=None):
     """Write human-readable summary report."""
     n_states = len(np.unique(states))
 
@@ -549,9 +623,14 @@ def write_summary_report(path, args, states, profiles_df, trans_df, durations_df
     ]
 
     if selection_df is not None and not selection_df.empty:
-        best = selection_df.loc[selection_df["BIC"].idxmin()]
-        lines.append(f"Selection:        {int(best['n_states'])} states "
-                     f"(BIC={best['BIC']:.1f})")
+        sel_row = selection_df[selection_df["n_states"] == n_states]
+        if not sel_row.empty:
+            sel_bic = float(sel_row["BIC"].values[0])
+        else:
+            sel_bic = float(selection_df.loc[selection_df["BIC"].idxmin(), "BIC"])
+        method_label = f", {selection_method}" if selection_method else ""
+        lines.append(f"Selection:        {n_states} states "
+                     f"(BIC={sel_bic:.1f}{method_label})")
     lines.append("")
 
     # State descriptions
@@ -597,17 +676,23 @@ def write_summary_report(path, args, states, profiles_df, trans_df, durations_df
 # Main
 # ---------------------------------------------------------------------------
 
-def main():
-    args = parse_args()
-    out_dir = Path(args.output_dir)
+def segment_subject(csv_path, out_dir, args):
+    """Run segmentation on one subject. Returns summary dict for batch."""
+    out_dir = Path(out_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
+
+    # Derive subject/dyad from filename
+    stem = Path(csv_path).stem.replace("_timeseries_features", "")
+    parts = stem.split("_", 1)
+    dyad_id = parts[0] if len(parts) > 1 else ""
+    subject_id = parts[1] if len(parts) > 1 else stem
 
     # Check overwrite
     segments_path = out_dir / "segments.csv"
     if not args.overwrite and segments_path.exists():
         print(f"  Already exists: {segments_path}")
         print("  Skipping (use --overwrite to replace)")
-        sys.exit(0)
+        return None
 
     # Check method availability
     if args.method == "hmm" and not HAS_HMMLEARN:
@@ -616,16 +701,17 @@ def main():
         sys.exit("Error: ruptures not installed (pip install ruptures)")
 
     print("Loading data...")
-    features_df = load_features(args.features)
+    features_df = load_features(csv_path)
 
     data, col_names, bin_times = prepare_features(features_df, args)
 
     # Dispatch to method
     probs = None
     selection_df = None
+    selection_method = None
 
     if args.method == "hmm":
-        states, probs, model, selection_df = run_hmm(data, args)
+        states, probs, model, selection_df, selection_method = run_hmm(data, args)
     elif args.method == "changepoint":
         states = run_changepoint(data, args)
     elif args.method == "kmeans-window":
@@ -654,11 +740,12 @@ def main():
     header = {
         "method": args.method,
         "n_states": n_states,
+        "selection_method": selection_method or "n/a",
         "reduce_features": args.reduce_features,
         "n_components": args.n_components,
         "time_resolution": f"{args.time_resolution}s",
         "min_duration": f"{args.min_duration}s",
-        "features_file": args.features,
+        "features_file": str(csv_path),
     }
     write_csv_with_header(segments_df, segments_path, header)
 
@@ -687,9 +774,70 @@ def main():
 
     # Summary report
     write_summary_report(out_dir / "summary_report.txt", args, states,
-                         profiles_df, trans_df, durations_df, selection_df)
+                         profiles_df, trans_df, durations_df, selection_df,
+                         selection_method)
 
     print(f"\nDone. {n_states} behavioral states identified.")
+
+    # Return batch summary row
+    best_bic = None
+    if selection_df is not None and not selection_df.empty:
+        best_bic = float(selection_df["BIC"].min())
+
+    return {
+        "subject_id": subject_id,
+        "dyad_id": dyad_id,
+        "n_states": int(n_states),
+        "method": args.method,
+        "best_bic": best_bic,
+        "features_file": str(csv_path),
+    }
+
+
+def main():
+    args = parse_args()
+    input_path = Path(args.features)
+
+    if input_path.is_file():
+        # Single subject
+        segment_subject(str(input_path), args.output_dir, args)
+    elif input_path.is_dir():
+        # Batch mode
+        csvs = sorted(input_path.rglob("*_timeseries_features.csv"))
+        if not csvs:
+            sys.exit(f"No timeseries CSV files found in {input_path}")
+
+        print(f"Batch mode: found {len(csvs)} subjects\n")
+        out_dir = Path(args.output_dir)
+        out_dir.mkdir(parents=True, exist_ok=True)
+
+        batch_rows = []
+        for csv_path in csvs:
+            stem = csv_path.stem.replace("_timeseries_features", "")
+            parts = stem.split("_", 1)
+            if len(parts) > 1:
+                sub_dir = out_dir / parts[0] / parts[1]
+            else:
+                sub_dir = out_dir / stem
+
+            print(f"\n{'=' * 60}")
+            print(f"  Processing: {stem}")
+            print(f"{'=' * 60}")
+            try:
+                row = segment_subject(str(csv_path), str(sub_dir), args)
+                if row is not None:
+                    batch_rows.append(row)
+            except Exception as e:
+                print(f"  FAILED: {e}")
+
+        if batch_rows:
+            batch_df = pd.DataFrame(batch_rows)
+            batch_df.to_csv(out_dir / "batch_summary.csv", index=False, float_format="%.2f")
+            print(f"\n  Saved: {out_dir / 'batch_summary.csv'} ({len(batch_df)} subjects)")
+
+            print(f"\n\nBatch complete: {len(batch_rows)} subjects processed.")
+    else:
+        sys.exit(f"Input not found: {input_path}")
 
 
 if __name__ == "__main__":

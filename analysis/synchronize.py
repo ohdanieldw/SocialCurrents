@@ -923,7 +923,7 @@ def main():
 
     # Run methods
     all_ts_frames = []
-    all_summary_frames = []
+    all_summary_frames = {}  # {method_name: [DataFrames...]}
     leader_rows = []
     coherence_data = None
     wavelet_coh = None
@@ -944,7 +944,7 @@ def main():
                 # Overall summary
                 for j, dim in enumerate(dim_names):
                     r, p = stats.pearsonr(data_a[:, j], data_b[:, j])
-                    all_summary_frames.append(pd.DataFrame([{
+                    all_summary_frames.setdefault("pearson", []).append(pd.DataFrame([{
                         "dimension": dim, "pearson_r_overall": r, "pearson_p": p,
                     }]))
 
@@ -970,21 +970,21 @@ def main():
                 all_ts_frames.append(ts)
                 for j, dim in enumerate(dim_names):
                     ccc = _lins_ccc(data_a[:, j], data_b[:, j])
-                    all_summary_frames.append(pd.DataFrame([{
+                    all_summary_frames.setdefault("concordance", []).append(pd.DataFrame([{
                         "dimension": dim, "concordance_ccc_overall": ccc,
                     }]))
 
             elif method == "rqa":
                 rqa_summary, recurrence_plot = method_rqa(data_a, data_b, dim_names, bin_times, args)
-                all_summary_frames.append(rqa_summary)
+                all_summary_frames.setdefault("rqa", []).append(rqa_summary)
 
             elif method == "dfa":
                 dfa_summary = method_dfa(data_a, data_b, dim_names, args)
-                all_summary_frames.append(dfa_summary)
+                all_summary_frames.setdefault("dfa", []).append(dfa_summary)
 
             elif method == "coherence":
                 coh_summary, coherence_data = method_coherence(data_a, data_b, dim_names, args)
-                all_summary_frames.append(coh_summary)
+                all_summary_frames.setdefault("coherence", []).append(coh_summary)
                 for _, row in coh_summary.iterrows():
                     leader_rows.append({
                         "dimension": row["dimension"], "method": "coherence",
@@ -1003,7 +1003,7 @@ def main():
                     data_a, data_b, dim_names, bin_times, args
                 )
                 if granger_summary is not None:
-                    all_summary_frames.append(granger_summary)
+                    all_summary_frames.setdefault("granger", []).append(granger_summary)
                     for _, row in granger_summary.iterrows():
                         leader_rows.append({
                             "dimension": row["dimension"], "method": "granger",
@@ -1014,7 +1014,7 @@ def main():
 
             elif method == "transfer-entropy":
                 te_summary = method_transfer_entropy(data_a, data_b, dim_names, args)
-                all_summary_frames.append(te_summary)
+                all_summary_frames.setdefault("transfer_entropy", []).append(te_summary)
                 for _, row in te_summary.iterrows():
                     leader_rows.append({
                         "dimension": row["dimension"], "method": "transfer-entropy",
@@ -1025,7 +1025,7 @@ def main():
 
             elif method == "coupled-oscillator":
                 co_summary = method_coupled_oscillator(data_a, data_b, dim_names, args)
-                all_summary_frames.append(co_summary)
+                all_summary_frames.setdefault("coupled_oscillator", []).append(co_summary)
                 for _, row in co_summary.iterrows():
                     leader_rows.append({
                         "dimension": row["dimension"], "method": "coupled-oscillator",
@@ -1051,10 +1051,23 @@ def main():
         ts_merged.to_csv(out_dir / "synchrony_timeseries.csv", index=False, float_format="%.6f")
         print(f"  Saved: {out_dir / 'synchrony_timeseries.csv'} ({len(ts_merged)} rows)")
 
-    # Summary
+    # Summary — prefix columns per method to avoid duplicates, then merge on dimension
     if all_summary_frames:
-        summary = all_summary_frames[0]
-        for df in all_summary_frames[1:]:
+        summary_frames = []
+        for method_name, frames in all_summary_frames.items():
+            method_df = pd.concat(frames, ignore_index=True)
+            # Group by dimension in case multiple rows per dimension from the same method
+            if "dimension" in method_df.columns:
+                method_df = method_df.groupby("dimension", as_index=False).first()
+            # Prefix non-dimension columns with method name
+            method_df.columns = [
+                c if c == "dimension" else f"{method_name}_{c}"
+                for c in method_df.columns
+            ]
+            summary_frames.append(method_df)
+
+        summary = summary_frames[0]
+        for df in summary_frames[1:]:
             summary = summary.merge(df, on="dimension", how="outer")
         summary.to_csv(out_dir / "synchrony_summary.csv", index=False, float_format="%.6f")
         print(f"  Saved: {out_dir / 'synchrony_summary.csv'}")

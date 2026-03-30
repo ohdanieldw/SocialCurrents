@@ -8,6 +8,7 @@ SocialCurrents is a multimodal feature extraction and analysis toolkit for socia
 
 ## Table of contents
 
+- [Pipeline overview](#pipeline-overview)
 - [Requirements](#requirements)
 - [Installation](#installation)
 - [Quick start](#quick-start)
@@ -27,6 +28,12 @@ SocialCurrents is a multimodal feature extraction and analysis toolkit for socia
 - [Citation](#citation)
 
 **Extracted features** span four modalities: body movement (33 pose landmarks per frame), facial expression (action units, valence/arousal, emotion probabilities), speech (pitch, volume, spectral features, emotion recognition), and language (transcription with speaker diarization, sentiment, semantic similarity).
+
+## Pipeline overview
+
+The diagram below shows how SocialCurrents components relate to one another.
+
+![SocialCurrents pipeline overview](docs/socialcurrents_ecosystem.svg)
 
 ## Requirements
 
@@ -222,6 +229,27 @@ One row per input file. Array-valued features are summarised into statistics col
 ### JSON (`{prefix}_summary_features.json`)
 
 Nested structure grouped by model. Large arrays (>1000 elements) are stored as statistics objects with `mean`, `min`, `max`, `std`, `shape`, `dtype`, and `samples` fields.
+
+## Output structure
+
+Subject-level analyses (describe, correlate, segment, map_states) are stored under each subject's own folder. Dyad-level analyses (synchrony) go under a joint folder named with both subject IDs, lower-numbered subject first.
+
+```
+analysis_output/
+  dyad005/
+    sub009/
+      describe/
+      correlate/
+      segments/
+      map_states/
+    sub010/
+      describe/
+      correlate/
+      segments/
+      map_states/
+    sub009_sub010/
+      synchrony/
+```
 
 ## Feature extractors
 
@@ -467,20 +495,11 @@ After extracting features with `extract.py`, SocialCurrents provides five analys
 
 ### Workflow
 
-```
-extract.py              Extracts features from video → timeseries CSV
-    |
-    v
-describe.py             Summarizes and visualizes extracted features
-    |
-    v
-correlate.py            Relates features to ratings, physiology, or neural data
-segment.py              Discovers conversational states (HMM, changepoint, k-means)
-synchronize.py          Measures interpersonal coordination between partners
-link_state_outcomes.py  Links conversational states to external signals
-```
+After extraction, the five analysis tools can be used in any order or combination. The diagram below shows how they connect — there is no required sequence.
 
-The tools after `describe.py` can be used in any order or combination depending on your research question:
+![Analysis workflow](docs/socialcurrents_ecosystem.svg)
+
+Pick the tools that match your research question:
 
 | Research question | Tools to use |
 |---|---|
@@ -488,7 +507,7 @@ The tools after `describe.py` can be used in any order or combination depending 
 | "Do features predict trait ratings?" | `correlate.py` |
 | "What are the conversation phases?" | `segment.py` |
 | "Are partners behaviorally coordinated?" | `synchronize.py` |
-| "Do conversational states predict impression change?" | `segment.py` then `link_state_outcomes.py` |
+| "Do conversational states predict impression change?" | `segment.py` then `map_states.py` |
 | "Does interpersonal synchrony predict liking?" | `synchronize.py` then `correlate.py` |
 | "Full analysis" | `describe.py` then all four |
 
@@ -552,14 +571,19 @@ python analysis/correlate.py --mode multi \
 
 ### `segment.py` -- Discover Conversational States
 
-Segments a conversation into distinct behavioral states using Hidden Markov Models (Rabiner, 1989), changepoint detection, or windowed k-means clustering. When set to `auto`, the number of states is selected via BIC/AIC model comparison. States are automatically sorted by overall energy level (State 1 = quietest, State N = most animated) so they are comparable across subjects. Output includes state profiles showing what each state "looks like" across feature dimensions, transition probability matrices, per-visit duration statistics, and a color-coded state timeline. Directly links to impression rating analysis -- e.g., "which conversational states predict changes in perceived trustworthiness?"
+Segments a conversation into distinct behavioral states using Hidden Markov Models (Rabiner, 1989), changepoint detection, or windowed k-means clustering. When set to `auto`, the number of states is selected via BIC model comparison. Use `--state-selection min` (default) for the lowest BIC, or `--state-selection elbow` for kneedle elbow detection -- the point of diminishing returns where adding more states stops yielding substantial improvement. States are automatically sorted by overall energy level (State 1 = quietest, State N = most animated) so they are comparable across subjects. Output includes state profiles showing what each state "looks like" across feature dimensions, transition probability matrices, per-visit duration statistics, and a color-coded state timeline. Directly links to impression rating analysis -- e.g., "which conversational states predict changes in perceived trustworthiness?"
 
 ```bash
+# Single subject
 python analysis/segment.py \
   -f output/dyad005/sub010/dyad005_sub010_timeseries_features.csv \
   --method hmm --n-states auto --max-states 8 \
+  --state-selection elbow \
   --reduce-features pca --n-components 5 \
   -o results/sub010_segments/
+
+# Batch -- all subjects in a directory
+python analysis/segment.py -f output/test_full5/ -o results/segments_all/
 ```
 
 ### `synchronize.py` -- Measure Interpersonal Coordination
@@ -584,17 +608,17 @@ python analysis/synchronize.py \
   -o results/dyad005_synchrony/
 ```
 
-### `link_state_outcomes.py` -- Link States to Outcomes
+### `map_states.py` -- Link States to Outcomes
 
 After segmenting a conversation with `segment.py`, use this tool to test whether different behavioral states are associated with different levels of an external signal -- for example, "are trustworthiness ratings higher during animated states than quiet states?" Computes per-state means with 95% CIs, pairwise Mann-Whitney U tests (FDR-corrected) with Cohen's d effect sizes, and produces a two-panel figure: boxplot of signal by state with significance brackets, plus a timeline showing the state sequence with the signal overlaid.
 
 ```bash
-python analysis/link_state_outcomes.py \
+python analysis/map_states.py \
   --states results/sub010_segments/segments.csv \
   --signal data/Trait/Trustworthiness/sub009rating.csv \
   --signal-col Value --signal-label Trustworthiness \
   --rater sub009 --target sub010 \
-  -o results/sub010_state_outcomes/
+  -o results/sub010_map_states/
 ```
 
 ### Why this toolkit
