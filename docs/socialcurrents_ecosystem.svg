@@ -24,26 +24,24 @@
 <line x1="585" y1="74" x2="585" y2="130" class="arr" marker-end="url(#arrow)"/>
 <g class="c-purple"><rect x="20" y="132" width="150" height="56" rx="8" stroke-width="0.5"/><text class="th" x="95" y="153" text-anchor="middle" dominant-baseline="central">extract.py</text><text class="ts" x="95" y="173" text-anchor="middle" dominant-baseline="central">audio · pose · face</text></g>
 <g class="c-purple"><rect x="510" y="132" width="150" height="56" rx="8" stroke-width="0.5"/><text class="th" x="585" y="153" text-anchor="middle" dominant-baseline="central">extract.py</text><text class="ts" x="585" y="173" text-anchor="middle" dominant-baseline="central">audio · pose · face</text></g>
-<line x1="95" y1="188" x2="95" y2="244" class="arr" marker-end="url(#arrow)"/>
-<line x1="585" y1="188" x2="585" y2="244" class="arr" marker-end="url(#arrow)"/>
-<g class="c-teal"><rect x="20" y="246" width="150" height="36" rx="8" stroke-width="0.5"/><text class="ts" x="95" y="264" text-anchor="middle" dominant-baseline="central">timeseries features</text></g>
-<g class="c-teal"><rect x="510" y="246" width="150" height="36" rx="8" stroke-width="0.5"/><text class="ts" x="585" y="264" text-anchor="middle" dominant-baseline="central">timeseries features</text></g>
-<line x1="60" y1="282" x2="50" y2="350" class="arr" marker-end="url(#arrow)"/>
+<g class="c-teal"><rect x="20" y="200" width="150" height="36" rx="8" stroke-width="0.5"/><text class="ts" x="95" y="218" text-anchor="middle" dominant-baseline="central">timeseries features</text></g>
+<g class="c-teal"><rect x="510" y="200" width="150" height="36" rx="8" stroke-width="0.5"/><text class="ts" x="585" y="218" text-anchor="middle" dominant-baseline="central">timeseries features</text></g>
+<line x1="60" y1="236" x2="50" y2="350" class="arr" marker-end="url(#arrow)"/>
 <g class="c-purple"><rect x="20" y="352" width="130" height="44" rx="8" stroke-width="0.5"/><text class="th" x="85" y="374" text-anchor="middle" dominant-baseline="central">describe.py</text></g>
 <g class="c-teal"><rect x="20" y="408" width="130" height="34" rx="8" stroke-width="0.5"/><text class="ts" x="85" y="425" text-anchor="middle" dominant-baseline="central">feature summaries</text></g>
-<line x1="130" y1="282" x2="210" y2="350" class="arr" marker-end="url(#arrow)"/>
+<line x1="130" y1="236" x2="210" y2="350" class="arr" marker-end="url(#arrow)"/>
 <line x1="310" y1="74" x2="248" y2="350" class="arr" marker-end="url(#arrow)"/>
 <g class="c-purple"><rect x="168" y="352" width="145" height="44" rx="8" stroke-width="0.5"/><text class="th" x="240" y="374" text-anchor="middle" dominant-baseline="central">correlate.py</text></g>
 <g class="c-teal"><rect x="168" y="408" width="145" height="34" rx="8" stroke-width="0.5"/><text class="ts" x="240" y="425" text-anchor="middle" dominant-baseline="central">cross-corr · lags · FDR</text></g>
-<line x1="95" y1="282" x2="360" y2="350" class="arr" marker-end="url(#arrow)"/>
+<line x1="95" y1="236" x2="360" y2="350" class="arr" marker-end="url(#arrow)"/>
 <g class="c-purple"><rect x="328" y="352" width="130" height="44" rx="8" stroke-width="0.5"/><text class="th" x="393" y="374" text-anchor="middle" dominant-baseline="central">segment.py</text></g>
 <g class="c-teal"><rect x="328" y="408" width="130" height="34" rx="8" stroke-width="0.5"/><text class="ts" x="393" y="425" text-anchor="middle" dominant-baseline="central">state sequence</text></g>
 <line x1="393" y1="442" x2="393" y2="510" class="arr" marker-end="url(#arrow)"/>
 <line x1="370" y1="74" x2="430" y2="510" class="arr" marker-end="url(#arrow)"/>
 <g class="c-purple"><rect x="328" y="512" width="130" height="44" rx="8" stroke-width="0.5"/><text class="th" x="393" y="534" text-anchor="middle" dominant-baseline="central">map_states.py</text></g>
 <g class="c-teal"><rect x="328" y="568" width="130" height="34" rx="8" stroke-width="0.5"/><text class="ts" x="393" y="585" text-anchor="middle" dominant-baseline="central">state links to signals</text></g>
-<line x1="160" y1="282" x2="490" y2="352" class="arr" marker-end="url(#arrow)"/>
-<line x1="540" y1="282" x2="530" y2="352" class="arr" marker-end="url(#arrow)"/>
+<line x1="160" y1="236" x2="490" y2="352" class="arr" marker-end="url(#arrow)"/>
+<line x1="540" y1="236" x2="530" y2="352" class="arr" marker-end="url(#arrow)"/>
 <g class="c-purple"><rect x="488" y="352" width="172" height="44" rx="8" stroke-width="0.5"/><text class="th" x="574" y="374" text-anchor="middle" dominant-baseline="central">synchronize.py</text></g>
 <g class="c-teal"><rect x="488" y="408" width="172" height="34" rx="8" stroke-width="0.5"/><text class="ts" x="574" y="425" text-anchor="middle" dominant-baseline="central">10 synchrony methods</text></g>
 <text class="ts" x="20" y="500" font-weight="500">Legend</text>
