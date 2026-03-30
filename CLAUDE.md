@@ -61,24 +61,22 @@ Note: `pyfeat_vision` now runs efficiently on CPU thanks to every-Nth-frame samp
 
 ## Output Directory Convention
 
-All analysis output follows a neuroimaging-style directory structure:
+All output follows a neuroimaging-style directory structure:
 
 ```
-analysis_output/
+output/
   dyad{NNN}/
     sub{NNN}/
-      extract/          # pipeline feature extraction outputs
       describe/         # descriptive analysis (describe.py)
+      extract/          # pipeline feature extraction outputs
       correlate/        # correlation analysis (correlate.py)
       segments/         # HMM/segmentation (segment.py)
+      map_states/       # state-outcome linking (map_states.py)
     sub{NNN}_sub{NNN}/
       synchrony/        # dyad-level synchrony (synchronize.py)
-      state_outcomes/   # state-outcome linking (map_states.py)
-  _batch/
-    describe/           # batch-level summaries across all subjects
 ```
 
-All scripts must read from and write to this structure. Use `--output-dir` to point to the appropriate `analysis_output/dyad{NNN}/sub{NNN}/{verb}/` path. Never create flat top-level directories like `analysis_output/describe/`.
+All scripts must read from and write to this structure. Use `--output-dir` to point to the appropriate `output/dyad{NNN}/sub{NNN}/{verb}/` path. Never create flat top-level directories like `output/describe/`.
 
 ## Architecture
 
