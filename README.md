@@ -203,7 +203,7 @@ The primary analysis output. Each row represents one video frame.
 ```python
 import pandas as pd
 
-ts = pd.read_csv("output/dyad002/sub003/dyad002_sub003_timeseries_features.csv")
+ts = pd.read_csv("output/dyad002/sub003/extract/dyad002_sub003_timeseries_features.csv")
 
 # Pose visibility for left wrist landmark over time
 ts.plot(x="time_seconds", y="GMP_land_visi_16")
@@ -543,7 +543,7 @@ Generates a comprehensive descriptive summary of your extracted features before 
 ```bash
 # Single subject
 python analysis/describe.py \
-  -f output/dyad005/sub010/dyad005_sub010_timeseries_features.csv \
+  -f output/dyad005/sub010/extract/dyad005_sub010_timeseries_features.csv \
   -o output/dyad005/sub010/describe/
 
 # Batch -- all subjects in a directory
@@ -557,14 +557,14 @@ Computes lagged cross-correlation between extracted behavioral features and exte
 ```bash
 # Single: behavioral features vs. trustworthiness rating
 python analysis/correlate.py --mode single \
-  -f output/dyad005/sub010/dyad005_sub010_timeseries_features.csv \
+  -f output/dyad005/sub010/extract/dyad005_sub010_timeseries_features.csv \
   -t data/Trait/Trustworthiness/sub009rating.csv \
   --reduce-features pca --n-components 5 --label Trustworthiness \
   -o output/dyad005/sub010/correlate/
 
 # Multi: behavioral features vs. fNIRS with ROI averaging
 python analysis/correlate.py --mode multi \
-  -f output/dyad005/sub010/dyad005_sub010_timeseries_features.csv \
+  -f output/dyad005/sub010/extract/dyad005_sub010_timeseries_features.csv \
   -t data/fNIRS/dyad005_sub009_fnirs.csv \
   --reduce-features pca --reduce-target roi-average \
   --roi-config data/fNIRS/roi_config.json \
@@ -578,7 +578,7 @@ Segments a conversation into distinct behavioral states using Hidden Markov Mode
 ```bash
 # Single subject
 python analysis/segment.py \
-  -f output/dyad005/sub010/dyad005_sub010_timeseries_features.csv \
+  -f output/dyad005/sub010/extract/dyad005_sub010_timeseries_features.csv \
   --method hmm --n-states auto --max-states 8 \
   --state-selection elbow \
   --reduce-features pca --n-components 5 \
@@ -603,8 +603,8 @@ All methods support lagged analysis and permutation-based surrogate testing for 
 
 ```bash
 python analysis/synchronize.py \
-  --person-a output/dyad005/sub009/dyad005_sub009_timeseries_features.csv \
-  --person-b output/dyad005/sub010/dyad005_sub010_timeseries_features.csv \
+  --person-a output/dyad005/sub009/extract/dyad005_sub009_timeseries_features.csv \
+  --person-b output/dyad005/sub010/extract/dyad005_sub010_timeseries_features.csv \
   --methods pearson,crosscorr,rqa,granger,coherence \
   --reduce-features grouped --window-size 30 \
   -o output/dyad005/sub009_sub010/synchrony/
@@ -620,7 +620,7 @@ python analysis/map_states.py \
   --signal data/Trait/Trustworthiness/sub009rating.csv \
   --signal-col Value --signal-label Trustworthiness \
   --rater sub009 --target sub010 \
-  -o output/dyad005/sub009_sub010/state_outcomes/
+  -o output/dyad005/sub010/map_states/
 ```
 
 ### Why this toolkit
