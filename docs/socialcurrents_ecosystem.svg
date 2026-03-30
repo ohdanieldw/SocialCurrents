@@ -1,4 +1,4 @@
-<svg width="100%" viewBox="0 0 680 800" xmlns="http://www.w3.org/2000/svg">
+<svg width="100%" viewBox="0 0 680 620" xmlns="http://www.w3.org/2000/svg">
 <defs>
 <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
 <path d="M2 1L8 5L2 9" fill="none" stroke="context-stroke" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
@@ -46,7 +46,8 @@
 <line x1="540" y1="282" x2="530" y2="352" class="arr" marker-end="url(#arrow)"/>
 <g class="c-purple"><rect x="488" y="352" width="172" height="44" rx="8" stroke-width="0.5"/><text class="th" x="574" y="374" text-anchor="middle" dominant-baseline="central">synchronize.py</text></g>
 <g class="c-teal"><rect x="488" y="408" width="172" height="34" rx="8" stroke-width="0.5"/><text class="ts" x="574" y="425" text-anchor="middle" dominant-baseline="central">10 synchrony methods</text></g>
-<g class="c-purple"><rect x="40" y="750" width="90" height="26" rx="6" stroke-width="0.5"/><text class="ts" x="85" y="763" text-anchor="middle" dominant-baseline="central">script</text></g>
-<g class="c-teal"><rect x="148" y="750" width="90" height="26" rx="6" stroke-width="0.5"/><text class="ts" x="193" y="763" text-anchor="middle" dominant-baseline="central">output</text></g>
-<g class="c-gray"><rect x="256" y="750" width="90" height="26" rx="6" stroke-width="0.5"/><text class="ts" x="301" y="763" text-anchor="middle" dominant-baseline="central">input data</text></g>
+<text class="ts" x="20" y="462" font-weight="500">Legend</text>
+<g class="c-purple"><rect x="20" y="474" width="90" height="26" rx="6" stroke-width="0.5"/><text class="ts" x="65" y="487" text-anchor="middle" dominant-baseline="central">script</text></g>
+<g class="c-teal"><rect x="20" y="506" width="90" height="26" rx="6" stroke-width="0.5"/><text class="ts" x="65" y="519" text-anchor="middle" dominant-baseline="central">output</text></g>
+<g class="c-gray"><rect x="20" y="538" width="90" height="26" rx="6" stroke-width="0.5"/><text class="ts" x="65" y="551" text-anchor="middle" dominant-baseline="central">input data</text></g>
 </svg>
