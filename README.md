@@ -232,23 +232,26 @@ Nested structure grouped by model. Large arrays (>1000 elements) are stored as s
 
 ## Output structure
 
-Subject-level analyses (describe, correlate, segment, map_states) are stored under each subject's own folder. Dyad-level analyses (synchrony) go under a joint folder named with both subject IDs, lower-numbered subject first.
+All analysis output follows a neuroimaging-style directory convention. Subject-level analyses (describe, correlate, segment) are stored under each subject's own folder. Dyad-level analyses (synchrony, state-outcome linking) go under a joint folder named with both subject IDs, lower-numbered subject first. Batch summaries go under `_batch/`. Use `--output-dir` (`-o`) to point to the appropriate nested path. Never create flat top-level directories like `analysis_output/describe/`.
 
 ```
 analysis_output/
   dyad005/
     sub009/
-      describe/
-      correlate/
-      segments/
-      map_states/
+      extract/                # pipeline feature extraction outputs
+      describe/               # descriptive analysis (describe.py)
+      correlate/              # correlation analysis (correlate.py)
+      segments/               # HMM/segmentation (segment.py)
     sub010/
+      extract/
       describe/
       correlate/
       segments/
-      map_states/
     sub009_sub010/
-      synchrony/
+      synchrony/              # dyad-level synchrony (synchronize.py)
+      state_outcomes/         # state-outcome linking (map_states.py)
+  _batch/
+    describe/                 # batch-level summaries across all subjects
 ```
 
 ## Feature extractors
@@ -541,11 +544,11 @@ Generates a comprehensive descriptive summary of your extracted features before 
 ```bash
 # Single subject
 python analysis/describe.py \
-  -f output/dyad005/sub010/dyad005_sub010_timeseries_features.csv \
-  -o results/sub010_descriptives/
+  -f analysis_output/dyad005/sub010/extract/dyad005_sub010_timeseries_features.csv \
+  -o analysis_output/dyad005/sub010/describe/
 
 # Batch -- all subjects in a directory
-python analysis/describe.py -f output/test_full5/ -o results/descriptives_all/
+python analysis/describe.py -f output/test_full5/ -o analysis_output/_batch/describe/
 ```
 
 ### `correlate.py` -- Relate Features to Outcomes
@@ -555,18 +558,18 @@ Computes lagged cross-correlation between extracted behavioral features and exte
 ```bash
 # Single: behavioral features vs. trustworthiness rating
 python analysis/correlate.py --mode single \
-  -f output/dyad005/sub010/dyad005_sub010_timeseries_features.csv \
+  -f analysis_output/dyad005/sub010/extract/dyad005_sub010_timeseries_features.csv \
   -t data/Trait/Trustworthiness/sub009rating.csv \
   --reduce-features pca --n-components 5 --label Trustworthiness \
-  -o results/sub010/
+  -o analysis_output/dyad005/sub010/correlate/
 
 # Multi: behavioral features vs. fNIRS with ROI averaging
 python analysis/correlate.py --mode multi \
-  -f output/dyad005/sub010/dyad005_sub010_timeseries_features.csv \
+  -f analysis_output/dyad005/sub010/extract/dyad005_sub010_timeseries_features.csv \
   -t data/fNIRS/dyad005_sub009_fnirs.csv \
   --reduce-features pca --reduce-target roi-average \
   --roi-config data/fNIRS/roi_config.json \
-  -o results/sub009_neural/
+  -o analysis_output/dyad005/sub009/correlate/
 ```
 
 ### `segment.py` -- Discover Conversational States
@@ -576,14 +579,14 @@ Segments a conversation into distinct behavioral states using Hidden Markov Mode
 ```bash
 # Single subject
 python analysis/segment.py \
-  -f output/dyad005/sub010/dyad005_sub010_timeseries_features.csv \
+  -f analysis_output/dyad005/sub010/extract/dyad005_sub010_timeseries_features.csv \
   --method hmm --n-states auto --max-states 8 \
   --state-selection elbow \
   --reduce-features pca --n-components 5 \
-  -o results/sub010_segments/
+  -o analysis_output/dyad005/sub010/segments/
 
 # Batch -- all subjects in a directory
-python analysis/segment.py -f output/test_full5/ -o results/segments_all/
+python analysis/segment.py -f output/test_full5/ -o analysis_output/_batch/segments/
 ```
 
 ### `synchronize.py` -- Measure Interpersonal Coordination
@@ -601,11 +604,11 @@ All methods support lagged analysis and permutation-based surrogate testing for 
 
 ```bash
 python analysis/synchronize.py \
-  --person-a output/dyad005/sub009/dyad005_sub009_timeseries_features.csv \
-  --person-b output/dyad005/sub010/dyad005_sub010_timeseries_features.csv \
+  --person-a analysis_output/dyad005/sub009/extract/dyad005_sub009_timeseries_features.csv \
+  --person-b analysis_output/dyad005/sub010/extract/dyad005_sub010_timeseries_features.csv \
   --methods pearson,crosscorr,rqa,granger,coherence \
   --reduce-features grouped --window-size 30 \
-  -o results/dyad005_synchrony/
+  -o analysis_output/dyad005/sub009_sub010/synchrony/
 ```
 
 ### `map_states.py` -- Link States to Outcomes
@@ -614,11 +617,11 @@ After segmenting a conversation with `segment.py`, use this tool to test whether
 
 ```bash
 python analysis/map_states.py \
-  --states results/sub010_segments/segments.csv \
+  --states analysis_output/dyad005/sub010/segments/segments.csv \
   --signal data/Trait/Trustworthiness/sub009rating.csv \
   --signal-col Value --signal-label Trustworthiness \
   --rater sub009 --target sub010 \
-  -o results/sub010_map_states/
+  -o analysis_output/dyad005/sub009_sub010/state_outcomes/
 ```
 
 ### Why this toolkit

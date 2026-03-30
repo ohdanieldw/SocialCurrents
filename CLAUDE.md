@@ -59,6 +59,27 @@ Note: `pyfeat_vision` now runs efficiently on CPU thanks to every-Nth-frame samp
 - **Local packages:** installed editable via `pip install -e packages/<name>`; do NOT use `poetry install` on macOS (Poetry is only used for the root `pyproject.toml` metadata and lock file management, not for the actual environment)
 - To reinstall a single local package after editing: `conda run -n pipeline-env pip install -e packages/<name>`
 
+## Output Directory Convention
+
+All analysis output follows a neuroimaging-style directory structure:
+
+```
+analysis_output/
+  dyad{NNN}/
+    sub{NNN}/
+      extract/          # pipeline feature extraction outputs
+      describe/         # descriptive analysis (describe.py)
+      correlate/        # correlation analysis (correlate.py)
+      segments/         # HMM/segmentation (segment.py)
+    sub{NNN}_sub{NNN}/
+      synchrony/        # dyad-level synchrony (synchronize.py)
+      state_outcomes/   # state-outcome linking (map_states.py)
+  _batch/
+    describe/           # batch-level summaries across all subjects
+```
+
+All scripts must read from and write to this structure. Use `--output-dir` to point to the appropriate `analysis_output/dyad{NNN}/sub{NNN}/{verb}/` path. Never create flat top-level directories like `analysis_output/describe/`.
+
 ## Architecture
 
 ### Package layout
