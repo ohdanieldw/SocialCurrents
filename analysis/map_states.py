@@ -44,6 +44,8 @@ def parse_args(argv=None):
                    help="Column name for signal values (default: Value)")
     p.add_argument("--signal-label", default="Signal",
                    help="Human-readable label for plots (default: Signal)")
+    p.add_argument("--rating-label", default="Trustworthiness",
+                   help="Label for trend plot titles/axes (default: Trustworthiness)")
     p.add_argument("--rater", default=None,
                    help="Rater subject ID for output filenames")
     p.add_argument("--target", default=None,
@@ -157,6 +159,55 @@ def compute_pairwise_tests(states, signal):
     return df
 
 
+def compute_segment_slopes(binned_states, signal_series, bin_size):
+    """Compute within-segment linear trend (slope) for each contiguous state run."""
+    states = binned_states["state"].values
+    times = binned_states.index.values * bin_size
+    signal = signal_series.values
+    rows = []
+    seg_idx = 0
+    i = 0
+
+    while i < len(states):
+        j = i
+        while j < len(states) and states[j] == states[i]:
+            j += 1
+
+        n_points = j - i
+        if n_points >= 3:
+            seg_time = times[i:j]
+            seg_signal = signal[i:j]
+            valid = ~np.isnan(seg_signal)
+            if valid.sum() >= 3:
+                result = sp_stats.linregress(seg_time[valid], seg_signal[valid])
+                rows.append({
+                    "state": int(states[i]),
+                    "segment_idx": seg_idx,
+                    "start_time": float(seg_time[0]),
+                    "duration": float(seg_time[-1] - seg_time[0] + bin_size),
+                    "slope": float(result.slope),
+                    "n_points": int(valid.sum()),
+                })
+        seg_idx += 1
+        i = j
+
+    return pd.DataFrame(rows)
+
+
+def aggregate_slopes(slopes_df, unique_states):
+    """Aggregate per-segment slopes by state."""
+    rows = []
+    for s in unique_states:
+        sub = slopes_df[slopes_df["state"] == s]
+        rows.append({
+            "state": s,
+            "mean_slope": float(sub["slope"].mean()) if len(sub) > 0 else np.nan,
+            "sd_slope": float(sub["slope"].std(ddof=1)) if len(sub) > 1 else np.nan,
+            "n_segments": int(len(sub)),
+        })
+    return pd.DataFrame(rows)
+
+
 # ---------------------------------------------------------------------------
 # Plotting
 # ---------------------------------------------------------------------------
@@ -167,10 +218,10 @@ STATE_COLORS = ["#4e79a7", "#f28e2b", "#e15759", "#76b7b2",
 
 
 def plot_state_outcomes(states_df, signal_series, summary_df, pairwise_df,
-                        signal_label, output_path):
-    """Two-panel figure: boxplot + timeline."""
-    fig, (ax_box, ax_time) = plt.subplots(2, 1, figsize=(14, 8),
-                                           gridspec_kw={"height_ratios": [1, 1.2]})
+                        signal_label, output_path, slopes_df=None, rating_label="Trustworthiness"):
+    """Three-panel figure: boxplot + slope violin + timeline."""
+    fig, (ax_box, ax_slope, ax_time) = plt.subplots(3, 1, figsize=(14, 11),
+                                                      gridspec_kw={"height_ratios": [1, 1, 1.2]})
 
     unique_states = sorted(states_df["state"].unique())
 
@@ -209,6 +260,39 @@ def plot_state_outcomes(states_df, signal_series, summary_df, pairwise_df,
     ax_box.set_ylabel(signal_label, fontsize=11)
     ax_box.set_title(f"{signal_label} by Behavioral State", fontsize=13)
     ax_box.grid(True, alpha=0.3, axis="y")
+
+    # --- Middle panel: slope violin ---
+    if slopes_df is not None and not slopes_df.empty:
+        slope_data = []
+        slope_colors = []
+        slope_labels = []
+        for s in unique_states:
+            sub = slopes_df[slopes_df["state"] == s]["slope"].values
+            slope_data.append(sub if len(sub) > 0 else np.array([0.0]))
+            slope_colors.append(STATE_COLORS[(s - 1) % len(STATE_COLORS)])
+            slope_labels.append(str(s))
+
+        parts = ax_slope.violinplot(slope_data, positions=range(1, len(unique_states) + 1),
+                                    showmeans=True, showmedians=False)
+        for i, pc in enumerate(parts["bodies"]):
+            pc.set_facecolor(slope_colors[i])
+            pc.set_alpha(0.7)
+        for key in ("cmeans", "cmins", "cmaxes", "cbars"):
+            if key in parts:
+                parts[key].set_color("black")
+                parts[key].set_linewidth(0.8)
+
+        ax_slope.axhline(0, color="gray", linestyle="--", linewidth=1, alpha=0.7)
+        ax_slope.set_xticks(range(1, len(unique_states) + 1))
+        ax_slope.set_xticklabels(slope_labels)
+    else:
+        ax_slope.text(0.5, 0.5, "No segments with ≥3 timepoints",
+                      ha="center", va="center", transform=ax_slope.transAxes, fontsize=11, color="gray")
+
+    ax_slope.set_xlabel("State", fontsize=11)
+    ax_slope.set_ylabel(f"Slope ({rating_label} / sec)", fontsize=11)
+    ax_slope.set_title(f"{rating_label} Trend by Behavioral State", fontsize=13)
+    ax_slope.grid(True, alpha=0.3, axis="y")
 
     # --- Bottom panel: timeline ---
     bin_times = states_df["time_seconds"].values
@@ -295,6 +379,24 @@ def main():
     n_pairs = len(pairwise)
     print(f"  {n_sig}/{n_pairs} pairs significantly different (FDR < 0.05)")
 
+    print("\nComputing within-state trends...")
+    slopes_df = compute_segment_slopes(binned_states, signal_series, args.bin_size)
+    unique_states = sorted(binned_states["state"].unique())
+    slope_agg = aggregate_slopes(slopes_df, unique_states)
+
+    if not slopes_df.empty:
+        print(f"  {len(slopes_df)} segments with ≥3 timepoints")
+        for _, row in slope_agg.iterrows():
+            if row["n_segments"] > 0:
+                print(f"    State {int(row['state'])}: mean_slope={row['mean_slope']:.4f}/s "
+                      f"(SD={row['sd_slope']:.4f}, n={int(row['n_segments'])})")
+    else:
+        print("  No segments with ≥3 timepoints for slope estimation")
+
+    # Merge slope stats into summary
+    summary = summary.merge(slope_agg[["state", "mean_slope", "sd_slope", "n_segments"]],
+                            on="state", how="left")
+
     # Save
     print("\nSaving outputs...")
     header = {
@@ -316,7 +418,7 @@ def main():
     print("\nGenerating plot...")
     plot_path = out_dir / f"{prefix}map_states_plot.png"
     plot_state_outcomes(binned_states, signal_series, summary, pairwise,
-                        args.signal_label, plot_path)
+                        args.signal_label, plot_path, slopes_df, args.rating_label)
 
     print(f"\nDone. Results saved to {out_dir}/")
 
