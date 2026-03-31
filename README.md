@@ -623,6 +623,131 @@ python analysis/map_states.py \
   -o output/dyad005/sub010/map_states/
 ```
 
+### Combining tools
+
+The analysis tools accept any timeseries CSV as input, so you can chain them to answer multi-level questions. Below are common recipes.
+
+**Does interpersonal synchrony predict trait impressions?**
+
+First compute synchrony, then correlate the synchrony timeseries with dynamic ratings.
+```bash
+# Step 1: Compute synchrony
+python analysis/synchronize.py \
+  --person-a output/dyad005/sub009/extract/dyad005_sub009_timeseries_features.csv \
+  --person-b output/dyad005/sub010/extract/dyad005_sub010_timeseries_features.csv \
+  --methods pearson,crosscorr,granger \
+  --reduce-features grouped \
+  -o output/dyad005/sub009_sub010/synchrony/
+
+# Step 2: Correlate synchrony with trustworthiness ratings
+python analysis/correlate.py --mode single \
+  -f output/dyad005/sub009_sub010/synchrony/synchrony_timeseries.csv \
+  -t data/Trait/Trustworthiness/sub009rating.csv \
+  --reduce-features every --label Trustworthiness \
+  -o output/dyad005/sub009_sub010/synch_x_trust/
+```
+
+**Which behavioral features drive synchrony?**
+
+Correlate one person's extracted features with the dyad's synchrony timeseries.
+```bash
+python analysis/correlate.py --mode single \
+  -f output/dyad005/sub010/extract/dyad005_sub010_timeseries_features.csv \
+  -t output/dyad005/sub009_sub010/synchrony/synchrony_timeseries.csv \
+  --target-col pearson_r --label "Movement Synchrony" \
+  --reduce-features pca --n-components 5 \
+  -o output/dyad005/sub009_sub010/synch_x_features/
+```
+
+**Do conversational states differ in synchrony?**
+
+Segment the conversation, then test whether synchrony is higher in some states than others.
+```bash
+# Step 1: Segment
+python analysis/segment.py \
+  -f output/dyad005/sub010/extract/dyad005_sub010_timeseries_features.csv \
+  --method hmm --n-states auto \
+  -o output/dyad005/sub010/segments/
+
+# Step 2: Map synchrony onto states
+python analysis/map_states.py \
+  --states output/dyad005/sub010/segments/segments.csv \
+  --signal output/dyad005/sub009_sub010/synchrony/synchrony_timeseries.csv \
+  --signal-col pearson_r --signal-label "Movement Synchrony" \
+  -o output/dyad005/sub009_sub010/states_x_synch/
+```
+
+**Do conversational states predict impression change?**
+
+The core analysis for linking behavioral dynamics to social perception.
+```bash
+# Step 1: Segment
+python analysis/segment.py \
+  -f output/dyad005/sub010/extract/dyad005_sub010_timeseries_features.csv \
+  --method hmm --n-states auto \
+  -o output/dyad005/sub010/segments/
+
+# Step 2: Map ratings onto states
+python analysis/map_states.py \
+  --states output/dyad005/sub010/segments/segments.csv \
+  --signal data/Trait/Trustworthiness/sub009rating.csv \
+  --signal-col Value --signal-label Trustworthiness \
+  --rater sub009 --target sub010 \
+  -o output/dyad005/sub010/map_states/
+```
+
+**Do features predict neural responses?**
+
+Correlate extracted behavioral features with multi-channel fNIRS or EEG.
+```bash
+python analysis/correlate.py --mode multi \
+  -f output/dyad005/sub010/extract/dyad005_sub010_timeseries_features.csv \
+  -t data/fNIRS/dyad005_sub010_fnirs.csv \
+  --reduce-features pca --reduce-target roi-average \
+  --roi-config data/fNIRS/roi_config.json \
+  --label "fNIRS activation" \
+  -o output/dyad005/sub010/features_x_fnirs/
+```
+
+**Full pipeline: extraction → description → segmentation → synchrony → impression analysis**
+```bash
+DYAD=dyad005
+A=sub009
+B=sub010
+OUT=output/$DYAD
+
+# Extract
+bash run_macos.sh -i data/${DYAD}_${A}.MP4 -o $OUT --normalize-fps
+bash run_macos.sh -i data/${DYAD}_${B}.MP4 -o $OUT --normalize-fps
+
+# Describe
+python analysis/describe.py -f $OUT/$A/extract/${DYAD}_${A}_timeseries_features.csv -o $OUT/$A/describe/
+python analysis/describe.py -f $OUT/$B/extract/${DYAD}_${B}_timeseries_features.csv -o $OUT/$B/describe/
+
+# Segment
+python analysis/segment.py -f $OUT/$A/extract/${DYAD}_${A}_timeseries_features.csv --method hmm --n-states auto -o $OUT/$A/segments/
+python analysis/segment.py -f $OUT/$B/extract/${DYAD}_${B}_timeseries_features.csv --method hmm --n-states auto -o $OUT/$B/segments/
+
+# Synchrony
+python analysis/synchronize.py \
+  --person-a $OUT/$A/extract/${DYAD}_${A}_timeseries_features.csv \
+  --person-b $OUT/$B/extract/${DYAD}_${B}_timeseries_features.csv \
+  --methods all -o $OUT/${A}_${B}/synchrony/
+
+# Correlate features with ratings
+python analysis/correlate.py --mode single \
+  -f $OUT/$B/extract/${DYAD}_${B}_timeseries_features.csv \
+  -t data/Trait/Trustworthiness/${A}rating.csv \
+  --label Trustworthiness -o $OUT/$B/correlate/
+
+# Map states to ratings
+python analysis/map_states.py \
+  --states $OUT/$B/segments/segments.csv \
+  --signal data/Trait/Trustworthiness/${A}rating.csv \
+  --signal-col Value --signal-label Trustworthiness \
+  -o $OUT/$B/map_states/
+```
+
 ### Why this toolkit
 
 Most multimodal pipelines stop at feature extraction. SocialCurrents goes further -- from raw video to publication-ready analyses of how behavioral cues predict social perception, how conversation partners coordinate their behavior, and what latent states structure a social interaction. The analysis tools work with any timeseries data, not just SocialCurrents output -- researchers can use `correlate.py` with EEG, fNIRS, or any multi-channel neural recording, and `synchronize.py` with any pair of behavioral or physiological timeseries.
