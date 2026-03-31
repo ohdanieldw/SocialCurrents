@@ -3,10 +3,10 @@
 All notable changes to SocialCurrents will be documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
-## [0.1.1] — 2026-03-29
+## [0.1.1] - 2026-03-29
 
 ### Added
-- `analysis/correlate.py` — standalone lagged cross-correlation analysis script
+- `analysis/correlate.py`: standalone lagged cross-correlation analysis script
   - Aligns pipeline timeseries features with continuous rating data (e.g., trustworthiness)
   - PCA (top 10 components) + 4 conceptual summary dimensions (movement energy, vocal energy, spectral complexity, openSMILE summary)
   - Lagged cross-correlation with configurable lag range and time bin size
@@ -20,9 +20,9 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Single-file input support (`-i path/to/video.mp4`)
 - Per-subject log files (`{prefix}.log`) inside each subject folder
 - Py-Feat configuration flags:
-  - `--pyfeat-sample-rate` (default: 5) — process every Nth frame
-  - `--pyfeat-face-model` (default: `mtcnn`) — face detector selection
-  - `--pyfeat-au-model` (default: `svm`) — action unit model selection
+  - `--pyfeat-sample-rate` (default: 5) - process every Nth frame
+  - `--pyfeat-face-model` (default: `mtcnn`) - face detector selection
+  - `--pyfeat-au-model` (default: `svm`) - action unit model selection
 - Multi-face selection: when multiple faces detected, keeps the face closest to the horizontal center of the frame (suits lab setups with centrally-seated participants)
 - Plain-English command reference and Py-Feat configuration guide in README
 
@@ -47,16 +47,16 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - ctranslate2 `use_auth_token` constructor error in WhisperX
 - speech_separation crashing entire pipeline on runtime error
 
-## [0.1.0] — 2026-03-26
+## [0.1.0] - 2026-03-26
 
 Initial public release.
 
 ### Added
 - 41 feature extractors across audio, speech/ASR, NLP, body pose, facial expression, and video modalities
 - Three output formats per recording session:
-  - `{prefix}_timeseries_features.csv` — one row per video frame
-  - `{prefix}_summary_features.csv` — per-recording summary statistics
-  - `{prefix}_summary_features.json` — full nested JSON with raw arrays
+  - `{prefix}_timeseries_features.csv` = one row per video frame
+  - `{prefix}_summary_features.csv` = per-recording summary statistics
+  - `{prefix}_summary_features.json` = full nested JSON with raw arrays
 - Per-frame time-series for MediaPipe (all frames), Py-Feat (120 sampled), and EmotiEffNet (64 sampled); audio arrays resampled to video frame rate
 - macOS setup script (`setup_macos.sh`) and run wrapper (`run_macos.sh`) with conda environment management
 - `--features` flag to run a subset of extractors

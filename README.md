@@ -2,9 +2,9 @@
 
 ![Version](https://img.shields.io/badge/version-0.1.1-blue)
 
-Extract 400+ behavioral features from video recordings and analyze social dynamics — interpersonal synchrony, conversational states, and impression formation — with no manual annotation required.
+Extract 400+ behavioral features from video recordings and analyze social dynamics - interpersonal synchrony, conversational states, and impression formation - with no manual annotation required.
 
-SocialCurrents is a multimodal feature extraction and analysis toolkit for social and behavioral research. Given video recordings of conversations, it extracts time-stamped behavioral features covering body movement, facial expression, speech, and language. Its analysis tools then relate these features to dynamic trait ratings, multi-channel neural recordings (fNIRS, EEG, fMRI), or any external timeseries — using lagged cross-correlation, HMM segmentation, and 10 interpersonal synchrony methods from the psychophysiology literature.
+SocialCurrents is a multimodal feature extraction and analysis toolkit for social and behavioral research. Given video recordings of conversations, it extracts time-stamped behavioral features covering body movement, facial expression, speech, and language. Its analysis tools then relate these features to dynamic trait ratings, multi-channel neural recordings (fNIRS, EEG, fMRI), or any external timeseries, using lagged cross-correlation, HMM segmentation, and 10 interpersonal synchrony methods from the psychophysiology literature.
 
 ## Table of contents
 
@@ -188,9 +188,9 @@ The primary analysis output. Each row represents one video frame.
 | `time_seconds` | Timestamp in seconds (`frame_idx / fps`) |
 | `oc_audvol`, `oc_audpit`, ... | Audio arrays linearly interpolated from audio frame rate to video frame rate |
 | `lbrs_*`, `osm_*` | Librosa / openSMILE LLD arrays, same interpolation |
-| `GMP_land_*`, `GMP_world_*` | MediaPipe pose landmarks -- one value per video frame (full resolution) |
-| `pf_au*`, `pf_anger`, ... | Py-Feat AUs / emotions -- sampled every Nth frame, interpolated to fill all rows |
-| `eln_prob_*`, `eln_valence`, `eln_arousal` | EmotiEffNet -- sampled from up to 64 frames, interpolated |
+| `GMP_land_*`, `GMP_world_*` | MediaPipe pose landmarks, one value per video frame (full resolution) |
+| `pf_au*`, `pf_anger`, ... | Py-Feat AUs / emotions, sampled every Nth frame, interpolated to fill all rows |
+| `eln_prob_*`, `eln_valence`, `eln_arousal` | EmotiEffNet, sampled from up to 64 frames, interpolated |
 | All other scalar features | Broadcast (same value repeated across all rows for that file) |
 
 **Temporal resolution notes:**
@@ -306,7 +306,7 @@ Detailed output keys for every extractor. Temporality indicates whether a featur
 
 ### Audio features
 
-#### `basic_audio` -- Volume & Pitch (`oc_`)
+#### `basic_audio`: Volume & Pitch (`oc_`)
 
 Audio feature extraction via librosa (McFee et al., 2015). Time-varying arrays at ~31 samples/sec, resampled to video frame rate.
 
@@ -317,7 +317,7 @@ Audio feature extraction via librosa (McFee et al., 2015). Time-varying arrays a
 | `oc_audpit` | Pitch (fundamental frequency) per audio frame |
 | `oc_audpit_diff` | Frame-to-frame pitch change |
 
-#### `librosa_spectral` -- Spectral & Rhythm (`lbrs_`)
+#### `librosa_spectral`: Spectral & Rhythm (`lbrs_`)
 
 Computed via librosa (McFee et al., 2015). Time-varying arrays resampled to video frame rate. `lbrs_tempo` and `lbrs_*_singlevalue` are scalars.
 
@@ -332,23 +332,23 @@ Computed via librosa (McFee et al., 2015). Time-varying arrays resampled to vide
 | `lbrs_spectral_contrast` | Spectral contrast per audio frame |
 | `lbrs_tempo` | Estimated tempo in BPM (scalar) |
 
-#### `opensmile` -- Low-Level Descriptors (~1,512 features, `osm_`)
+#### `opensmile`: Low-Level Descriptors (~1,512 features, `osm_`)
 
 openSMILE ComParE_2016 and eGeMAPSv02 feature sets (Eyben et al., 2010). LLD keys (`osm_*_sma`) are time-varying; functional keys (`osm_*_mean`, `osm_*_stddev`, etc.) are scalars.
 
 Key time-varying outputs: `osm_pcm_RMSenergy_sma`, `osm_loudness_sma`, `osm_F0final_sma`, `osm_voicingProb_sma`, `osm_jitterLocal_sma`, `osm_shimmerLocal_sma`, `osm_logHNR_sma`, `osm_mfcc1_sma`...`osm_mfcc12_sma`, `osm_spectralCentroid_sma`, `osm_spectralFlux_sma`, `osm_spectralRollOff25_sma`...`osm_spectralRollOff90_sma`, `osm_lsf1`...`osm_lsf8`.
 
-#### `audiostretchy` -- Time-Stretching Analysis (`AS_`)
+#### `audiostretchy`: Time-Stretching Analysis (`AS_`)
 
 All static scalars: `AS_ratio`, `AS_gap_ratio`, `AS_lower_freq`, `AS_upper_freq`, `AS_buffer_ms`, `AS_threshold_gap_db`, `AS_sample_rate`, `AS_input_duration_sec`, `AS_output_duration_sec`.
 
 ### Speech features
 
-#### `speech_emotion` -- Speech Emotion Recognition (`ser_`)
+#### `speech_emotion`: Speech Emotion Recognition (`ser_`)
 
 Static scalars (probabilities summing to 1.0): `ser_neutral`, `ser_calm`, `ser_happy`, `ser_sad`, `ser_angry`, `ser_fear`, `ser_disgust`, `ser_ps`, `ser_boredom`.
 
-#### `whisperx_transcription` -- Transcription & Diarization (`WhX_`)
+#### `whisperx_transcription`: Transcription & Diarization (`WhX_`)
 
 WhisperX builds on Whisper (Radford et al., 2023) with forced alignment and speaker diarization. Requires `HF_TOKEN` for speaker diarization. Static (full-recording transcript broadcast to all rows).
 
@@ -386,9 +386,9 @@ Dialogue-level emotion: `MELD_num_utterances`, `MELD_num_speakers`, `MELD_count_
 
 > Vision features are extracted from the video directly (not the audio track). They are skipped when `--is-audio` is used.
 
-#### `mediapipe_pose_vision` -- 33 Pose Landmarks (`GMP_`)
+#### `mediapipe_pose_vision`: 33 Pose Landmarks (`GMP_`)
 
-Google MediaPipe PoseLandmarker (Lugaresi et al., 2019). Time-varying -- processes every video frame. 33 body landmarks, each with 10 attributes (330+ features):
+Google MediaPipe PoseLandmarker (Lugaresi et al., 2019). Time-varying; processes every video frame. 33 body landmarks, each with 10 attributes (330+ features):
 
 | Attribute group | Keys | Description |
 |---|---|---|
@@ -399,9 +399,9 @@ Google MediaPipe PoseLandmarker (Lugaresi et al., 2019). Time-varying -- process
 
 Landmark mapping (1-indexed): 1=Nose, 12=Left shoulder, 13=Right shoulder, 14=Left elbow, 15=Right elbow, 16=Left wrist, 17=Right wrist, 24=Left hip, 25=Right hip.
 
-#### `pyfeat_vision` -- Facial Expression Analysis (`pf_`)
+#### `pyfeat_vision`: Facial Expression Analysis (`pf_`)
 
-Py-Feat (Cheong et al., 2023). Time-varying -- samples every Nth frame (default N=5), interpolated to all rows. 37 features:
+Py-Feat (Cheong et al., 2023). Time-varying; samples every Nth frame (default N=5), interpolated to all rows. 37 features:
 
 | Group | Keys | Description |
 |---|---|---|
@@ -412,7 +412,7 @@ Py-Feat (Cheong et al., 2023). Time-varying -- samples every Nth frame (default 
 
 See [Facial expression extraction (Py-Feat)](#facial-expression-extraction-py-feat) for configuration options.
 
-#### `emotieffnet_vision` -- EmotiEffNet (`eln_`)
+#### `emotieffnet_vision`: EmotiEffNet (`eln_`)
 
 Time-varying (up to 64 sampled frames, interpolated): `eln_arousal`, `eln_valence`, `eln_prob_{emotion}`. Static: `eln_top_emotion`, `eln_face_detected_ratio`, `eln_samples`.
 
@@ -428,7 +428,7 @@ Time-varying (up to 64 sampled frames, interpolated): `eln_arousal`, `eln_valenc
 | `vitpose_vision` | `vit_` | 17 COCO keypoints via Vision Transformer |
 | `pare_vision` | `PARE_` | 3D body shape/pose parameters |
 | `crowdflow_vision` | `of_` | Dense optical flow statistics |
-| `optical_flow_vision` | -- | Sparse/dense optical flow (OpenCV) |
+| `optical_flow_vision` | - | Sparse/dense optical flow (OpenCV) |
 | `instadm_vision` | `indm_` | Depth map statistics and motion descriptors |
 
 ## Facial expression extraction (Py-Feat)
@@ -446,7 +446,7 @@ Think of the face detector as the part of the system that first finds where the 
 | `img2pose` | A third option that estimates head pose simultaneously. Experimental; use only if the other two don't work for your data. |
 
 ```bash
-# Use the default (mtcnn) -- no flag needed
+# Use the default (mtcnn) - no flag needed
 bash run_macos.sh -i data/ -f pyfeat_vision
 
 # Explicitly choose a different detector
@@ -457,7 +457,7 @@ bash run_macos.sh -i data/ -f pyfeat_vision --pyfeat-face-model retinaface
 
 Instead of analyzing every single frame of video (which would be very slow), the pipeline analyzes every Nth frame and fills in the gaps automatically using interpolation. The default is 5, meaning it looks at one out of every 5 frames.
 
-For a typical 25 fps video, this means **5 facial measurements per second** -- more than enough to capture meaningful changes in expression during a conversation.
+For a typical 25 fps video, this means **5 facial measurements per second**, more than enough to capture meaningful changes in expression during a conversation.
 
 | Sample rate | Frames analyzed per second (at 25 fps) | 10-min video: frames analyzed | Speed |
 |---|---|---|---|
@@ -497,7 +497,7 @@ After extracting features with `extract.py`, SocialCurrents provides five analys
 
 ### Workflow
 
-After extraction, the five analysis tools can be used in any order or combination. The diagram below shows how they connect — there is no required sequence.
+After extraction, the five analysis tools can be used in any order or combination. The diagram below shows how they connect; there is no required sequence.
 
 ![Analysis workflow](docs/socialcurrents_ecosystem.svg)
 
@@ -536,7 +536,7 @@ python analysis/synchronize.py \
 
 The only requirement is that each CSV has a time column (named `time_seconds` or `VideoTime` in milliseconds) and numeric feature columns.
 
-### `describe.py` -- Understand Your Data
+### `describe.py`: Understand Your Data
 
 Generates a comprehensive descriptive summary of your extracted features before you run any statistical analyses. Reports per-feature statistics (mean, SD, skewness, kurtosis, percent zero/NaN), groups features by modality, tests stationarity (ADF test), and produces diagnostic plots: timeseries over time, PCA scree plot, loadings heatmap, feature distributions, and inter-dimension correlations. In **batch mode**, pass a directory to process all subjects at once and get a cross-subject comparison with box plots.
 
@@ -546,13 +546,15 @@ python analysis/describe.py \
   -f output/dyad005/sub010/extract/dyad005_sub010_timeseries_features.csv \
   -o output/dyad005/sub010/describe/
 
-# Batch -- all subjects in a directory
+# Batch: all subjects in a directory
 python analysis/describe.py -f output/ -o output/
 ```
 
-### `correlate.py` -- Relate Features to Outcomes
+Accepts any timeseries CSV, not just SocialCurrents output.
 
-Computes lagged cross-correlation between extracted behavioral features and external target signals. **Single mode** correlates features with a dynamic rating timeseries (e.g., continuous trustworthiness judgments from a slider task), a physiological signal, or any continuous measure -- with adjustable lag range to capture the typical 2-5 second perceptual delay in continuous ratings. **Multi mode** correlates features with multi-channel neural data (EEG, fNIRS, multi-voxel patterns), supporting PCA, Factor Analysis, ICA, CCA, and ROI-based reduction of target channels. All modes include Benjamini-Hochberg FDR correction and flexible dimensionality reduction (`pca`, `fa`, `ica`, `grouped`, `every`, or `all` to run all methods and compare).
+### `correlate.py`: Relate Features to Outcomes
+
+Computes lagged cross-correlation between extracted behavioral features and external target signals. **Single mode** correlates features with a dynamic rating timeseries (e.g., continuous trustworthiness judgments from a slider task), a physiological signal, or any continuous measure, with adjustable lag range to capture the typical 2-5 second perceptual delay in continuous ratings. **Multi mode** correlates features with multi-channel neural data (EEG, fNIRS, multi-voxel patterns), supporting PCA, Factor Analysis, ICA, CCA, and ROI-based reduction of target channels. All modes include Benjamini-Hochberg FDR correction and flexible dimensionality reduction (`pca`, `fa`, `ica`, `grouped`, `every`, or `all` to run all methods and compare).
 
 ```bash
 # Single: behavioral features vs. trustworthiness rating
@@ -571,9 +573,11 @@ python analysis/correlate.py --mode multi \
   -o output/dyad005/sub009/correlate/
 ```
 
-### `segment.py` -- Discover Conversational States
+Works with any target signal: dynamic ratings, heart rate, fNIRS, synchrony timeseries, or any CSV with a time column.
 
-Segments a conversation into distinct behavioral states using Hidden Markov Models (Rabiner, 1989), changepoint detection, or windowed k-means clustering. When set to `auto`, the number of states is selected via BIC model comparison. Use `--state-selection min` (default) for the lowest BIC, or `--state-selection elbow` for kneedle elbow detection -- the point of diminishing returns where adding more states stops yielding substantial improvement. States are automatically sorted by overall energy level (State 1 = quietest, State N = most animated) so they are comparable across subjects. Output includes state profiles showing what each state "looks like" across feature dimensions, transition probability matrices, per-visit duration statistics, and a color-coded state timeline. Directly links to impression rating analysis -- e.g., "which conversational states predict changes in perceived trustworthiness?"
+### `segment.py`: Discover Conversational States
+
+Segments a conversation into distinct behavioral states using Hidden Markov Models (Rabiner, 1989), changepoint detection, or windowed k-means clustering. When set to `auto`, the number of states is selected via BIC model comparison. Use `--state-selection min` (default) for the lowest BIC, or `--state-selection elbow` for kneedle elbow detection, the point of diminishing returns where adding more states stops yielding substantial improvement. States are automatically sorted by overall energy level (State 1 = quietest, State N = most animated) so they are comparable across subjects. Output includes state profiles showing what each state "looks like" across feature dimensions, transition probability matrices, per-visit duration statistics, and a color-coded state timeline. Directly links to impression rating analysis, e.g., "which conversational states predict changes in perceived trustworthiness?"
 
 ```bash
 # Single subject
@@ -584,11 +588,13 @@ python analysis/segment.py \
   --reduce-features pca --n-components 5 \
   -o output/dyad005/sub010/segments/
 
-# Batch -- all subjects in a directory
+# Batch: all subjects in a directory
 python analysis/segment.py -f output/ -o output/
 ```
 
-### `synchronize.py` -- Measure Interpersonal Coordination
+Works on any timeseries CSV: behavioral features, physiological recordings, or neural data.
+
+### `synchronize.py`: Measure Interpersonal Coordination
 
 Implements 10 synchrony methods spanning the full literature on interpersonal coordination (see Mayo & Gordon, 2020 for a review), from basic windowed correlation to nonlinear dynamics and directional causality models.
 
@@ -610,9 +616,11 @@ python analysis/synchronize.py \
   -o output/dyad005/sub009_sub010/synchrony/
 ```
 
-### `map_states.py` -- Link States to Outcomes
+Works with any pair of timeseries CSVs: behavioral features, physiological signals, or neural recordings.
 
-After segmenting a conversation with `segment.py`, use this tool to test whether different behavioral states are associated with different levels of an external signal -- for example, "are trustworthiness ratings higher during animated states than quiet states?" Computes per-state means with 95% CIs, pairwise Mann-Whitney U tests (FDR-corrected) with Cohen's d effect sizes, and produces a two-panel figure: boxplot of signal by state with significance brackets, plus a timeline showing the state sequence with the signal overlaid.
+### `map_states.py`: Link States to Outcomes
+
+After segmenting a conversation with `segment.py`, use this tool to test whether different behavioral states are associated with different levels of an external signal. For example, "are trustworthiness ratings higher during animated states than quiet states?" Computes per-state means with 95% CIs, pairwise Mann-Whitney U tests (FDR-corrected) with Cohen's d effect sizes, and produces a two-panel figure: boxplot of signal by state with significance brackets, plus a timeline showing the state sequence with the signal overlaid.
 
 ```bash
 python analysis/map_states.py \
@@ -622,6 +630,8 @@ python analysis/map_states.py \
   --rater sub009 --target sub010 \
   -o output/dyad005/sub010/map_states/
 ```
+
+The signal can be anything: trait ratings, heart rate, synchrony values, neural activation. Any CSV with a time and value column.
 
 ### Combining tools
 
@@ -750,7 +760,7 @@ python analysis/map_states.py \
 
 ### Why this toolkit
 
-Most multimodal pipelines stop at feature extraction. SocialCurrents goes further -- from raw video to publication-ready analyses of how behavioral cues predict social perception, how conversation partners coordinate their behavior, and what latent states structure a social interaction. The analysis tools work with any timeseries data, not just SocialCurrents output -- researchers can use `correlate.py` with EEG, fNIRS, or any multi-channel neural recording, and `synchronize.py` with any pair of behavioral or physiological timeseries.
+Most multimodal pipelines stop at feature extraction. SocialCurrents goes further: from raw video to publication-ready analyses of how behavioral cues predict social perception, how conversation partners coordinate their behavior, and what latent states structure a social interaction. The analysis tools work with any timeseries data, not just SocialCurrents output. Researchers can use `correlate.py` with EEG, fNIRS, or any multi-channel neural recording, and `synchronize.py` with any pair of behavioral or physiological timeseries. The five tools compose freely: the output of any tool can be the input to any other, letting researchers answer multi-level questions (e.g., does synchrony during animated conversational states predict trustworthiness change?) without writing custom analysis code.
 
 ## Optional & heavy features
 
@@ -823,9 +833,9 @@ Vision models are the heaviest consumers. Audio-only runs are much lighter.
 
 - **Multivariate pattern analysis.** Use the full feature space (not just PCA) to predict social outcomes via machine learning (SVM, random forest, neural net) with cross-validation. `analysis/predict.py` would take features + outcome labels and run classification/regression with feature importance.
 - **Dynamic structural equation modeling (DSEM).** Multilevel time-series models that capture within-dyad and between-dyad variability in coupling dynamics. Would extend the coupled oscillator model in `synchronize.py` to handle random effects across dyads.
-- **Network analysis of behavioral coordination.** For group interactions (3+ people), construct dynamic networks where edges represent pairwise synchrony and analyze network topology over time — centrality, clustering, information flow.
+- **Network analysis of behavioral coordination.** For group interactions (3+ people), construct dynamic networks where edges represent pairwise synchrony and analyze network topology over time: centrality, clustering, information flow.
 - **Automated behavioral coding.** Train classifiers on extracted features to reproduce human behavioral coding schemes (e.g., SPAFF for couples, CIRS for rapport). Would let researchers apply established coding systems without manual annotation.
-- **Longitudinal analysis.** Tools for tracking how behavioral patterns change across multiple sessions with the same participants — therapy progress, relationship development, skill acquisition.
+- **Longitudinal analysis.** Tools for tracking how behavioral patterns change across multiple sessions with the same participants: therapy progress, relationship development, skill acquisition.
 
 Contributions and feature requests are welcome at [github.com/ohdanieldw/socialcurrents/issues](https://github.com/ohdanieldw/socialcurrents/issues).
 
@@ -873,5 +883,5 @@ Zbilut, J. P., & Webber, C. L. (1992). Embeddings and delays as derived from qua
 
 ## License
 
-MIT -- see [LICENSE](LICENSE).
+MIT. See [LICENSE](LICENSE).
 Copyright 2026 Daniel DongWon Oh

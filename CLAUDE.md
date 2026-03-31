@@ -104,10 +104,10 @@ external/
    - Calls each vision extractor (from `cv_models/vision/`) in order
    - MediaPipe, Py-Feat, and EmotiEffNet are always called with `keep_per_frame=True` to capture per-frame data
 3. **`process_directory()`** calls `_save_file_outputs()` for each video immediately after processing it. The output path is determined by parsing the filename: `{dyadID}_{subjectID}.ext` → `self.output_dir / dyadID / subjectID`; filenames without an underscore fall back to `self.output_dir / stem`. A `file_prefix` (`{dyadID}_{subjectID}`) is prepended to every output filename. A per-subject `logging.FileHandler` is added before processing each file and removed after.
-   - `{prefix}_timeseries_features.csv` — one row per video frame (built by `_build_timeindexed_csv()`); no `filename` column
-   - `{prefix}_summary_features.csv` — one row per file (arrays summarised to `_mean/_std/_min/_max`); no `filename` column
-   - `{prefix}_summary_features.json` — nested JSON grouped by model
-   - `{prefix}.log` — processing log for this subject (e.g., `dyad002_sub003.log`)
+   - `{prefix}_timeseries_features.csv` = one row per video frame (built by `_build_timeindexed_csv()`); no `filename` column
+   - `{prefix}_summary_features.csv` = one row per file (arrays summarised to `_mean/_std/_min/_max`); no `filename` column
+   - `{prefix}_summary_features.json` = nested JSON grouped by model
+   - `{prefix}.log` = processing log for this subject (e.g., `dyad002_sub003.log`)
 
 ### Feature extractor conventions
 
@@ -117,7 +117,7 @@ All extractors expose a `get_feature_dict(path) -> dict` method that returns eit
 
 `_flatten_feature_output()` in `pipeline.py` normalises both forms to a flat dict before merging into `features`.
 
-Extractors are **lazily initialised** in `_get_extractor(feature_name)` — missing deps cause the extractor to be set to `None` and that feature silently skipped (prints a `Warning:` line).
+Extractors are **lazily initialised** in `_get_extractor(feature_name)`. Missing deps cause the extractor to be set to `None` and that feature silently skipped (prints a `Warning:` line).
 
 ### Per-frame data contract
 
@@ -152,11 +152,11 @@ Many vision/audio analyzers call `ensure_repo(repo_key)` at init time (`cv_model
 | File | Purpose |
 |---|---|
 | `extract.py` | CLI entry point; `FEATURE_CATALOG` defines all 35 extractors |
-| `packages/core_pipeline/core_pipeline/pipeline.py` | `MultimodalPipeline` — orchestration, output writing, CSV building |
+| `packages/core_pipeline/core_pipeline/pipeline.py` | `MultimodalPipeline`: orchestration, output writing, CSV building |
 | `packages/cv_models/cv_models/vision/mediapipe_pose_analyzer.py` | Full per-frame pose, `keep_per_frame=True` returns `per_frame` list |
 | `packages/cv_models/cv_models/vision/pyfeat_analyzer.py` | Facial AUs/emotions, per-frame collection in `_detect_features()` |
 | `packages/cv_models/cv_models/vision/emotieffnet_analyzer.py` | Valence/arousal/emotions, per-sample collection in `analyze_video()` |
-| `packages/audio_models/audio_models/utils/audio_extraction.py` | ffmpeg wrapper — extracts mono 16 kHz WAV from video |
+| `packages/audio_models/audio_models/utils/audio_extraction.py` | ffmpeg wrapper: extracts mono 16 kHz WAV from video |
 | `packages/cv_models/cv_models/external/repo_manager.py` | On-demand git clone for upstream vision model repos |
 | `analysis/correlate.py` | Lagged cross-correlation between pipeline features and target signals (ratings, EEG, fNIRS) |
 | `analysis/utils.py` | Shared analysis utilities: loading, binning, reduction, correlation, plotting |
