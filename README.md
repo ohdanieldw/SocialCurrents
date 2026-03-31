@@ -851,7 +851,7 @@ If you use SocialCurrents in published research, please cite:
 
 ## Acknowledgments
 
-Initial pipeline scaffolding by Kenneth Dao; testing and debugging by Shuo Duan. All subsequent development, integration, and testing by Daniel DongWon Oh.
+[Initial pipeline](https://github.com/tkhahns/multimodal-data-pipeline) scaffolding by Kenneth Dao; testing and debugging by Shuo Duan. All subsequent development, integration, and testing by Daniel DongWon Oh.
 
 ## References
 
