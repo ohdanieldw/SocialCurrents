@@ -841,7 +841,7 @@ Contributions and feature requests are welcome at [github.com/ohdanieldw/socialc
 
 ## Funding
 
-Development of SocialCurrents was supported by a Seed Fund Grant from the Centre for Social Sciences and Humanities (CSSH), National University of Singapore, awarded to Daniel DongWon Oh.
+Early-stage development of SocialCurrents was supported by a seed fund grant from [the Centre for Social Sciences and Humanities (CSSH), National University of Singapore](https://cssh.nus.edu.sg/), awarded to [Daniel DongWon Oh](https://dongwonoh.com).
 
 ## Citation
 
@@ -851,7 +851,7 @@ If you use SocialCurrents in published research, please cite:
 
 ## Acknowledgments
 
-[Initial pipeline](https://github.com/tkhahns/multimodal-data-pipeline) scaffolding by Kenneth Dao; testing and debugging by Shuo Duan. All subsequent development, integration, and testing by Daniel DongWon Oh.
+[Initial pipeline](https://github.com/tkhahns/multimodal-data-pipeline) scaffolding by Kenneth Dao; testing and debugging by Shuo Duan. All subsequent development, integration, and testing by  [Daniel DongWon Oh](https://dongwonoh.com).
 
 ## References
 
