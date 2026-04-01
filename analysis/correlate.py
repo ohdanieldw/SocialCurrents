@@ -9,6 +9,7 @@ and multi-channel target modes.
 """
 
 import argparse
+import fnmatch
 import json
 import sys
 from pathlib import Path
@@ -77,6 +78,9 @@ def parse_args(argv=None):
                    help="Column name for target values in single mode (default: Value)")
     p.add_argument("--label", default="Trustworthiness",
                    help="What the target measures, used in plot titles (default: Trustworthiness)")
+    p.add_argument("--select-features", default=None,
+                   help="Comma-separated column names or glob patterns "
+                        "(e.g. 'pearson_r_*,crosscorr_r_*') to select before reduction")
     p.add_argument("--no-zscore", action="store_true",
                    help="Skip z-scoring for grouped/every modes (PCA/FA/ICA always z-score internally)")
     p.add_argument("--overwrite", action="store_true",
@@ -95,6 +99,31 @@ def parse_args(argv=None):
     multi.add_argument("--roi-config", default=None,
                        help="JSON file mapping ROI names to channel lists (for --reduce-target roi-average)")
     return p.parse_args(argv)
+
+
+# ---------------------------------------------------------------------------
+# Feature selection
+# ---------------------------------------------------------------------------
+
+def _apply_select_features(df, select_str):
+    """Filter DataFrame columns by comma-separated names or glob patterns.
+
+    Returns a subset of *df* containing only columns that match at least one
+    pattern.  Patterns are matched with ``fnmatch`` so ``*`` and ``?`` work.
+    """
+    patterns = [p.strip() for p in select_str.split(",") if p.strip()]
+    all_cols = list(df.columns)
+    matched = []
+    for pat in patterns:
+        matched.extend(fnmatch.filter(all_cols, pat))
+    # Preserve original order, deduplicate
+    seen = set()
+    selected = [c for c in all_cols if c in set(matched) and not (c in seen or seen.add(c))]
+    if not selected:
+        sys.exit(f"Error: --select-features matched no columns. "
+                 f"Patterns: {patterns}; available: {all_cols[:20]}...")
+    print(f"  --select-features: {len(selected)}/{len(all_cols)} columns selected")
+    return df[selected]
 
 
 # ---------------------------------------------------------------------------
@@ -184,6 +213,9 @@ def run_single(args):
     # Filter
     print("\nFiltering features...")
     filtered = filter_timevarying_columns(binned_feat)
+
+    if args.select_features:
+        filtered = _apply_select_features(filtered, args.select_features)
 
     # Determine which methods to run
     methods = ["pca", "fa", "ica", "grouped"] if args.reduce_features == "all" else [args.reduce_features]
@@ -360,6 +392,9 @@ def run_multi(args):
     # Filter features
     print("\nFiltering features...")
     filtered = filter_timevarying_columns(binned_feat)
+
+    if args.select_features:
+        filtered = _apply_select_features(filtered, args.select_features)
 
     # Build feature dimensions (only first method for multi)
     method = args.reduce_features if args.reduce_features != "all" else "pca"

@@ -72,15 +72,28 @@ def parse_args(argv=None):
                    help=f"Comma-separated methods or 'all' (default: all). "
                         f"Options: {', '.join(ALL_METHODS)}")
     p.add_argument("--reduce-features",
-                   choices=["pca", "fa", "ica", "grouped", "every", "all"],
-                   default="grouped", help="Feature reduction (default: grouped)")
-    p.add_argument("--n-components", type=int, default=5, help="Components for PCA/FA/ICA (default: 5)")
+                   choices=["pca", "fa", "ica", "cca", "grouped", "grouped-pca",
+                            "cluster", "every", "all"],
+                   default="grouped",
+                   help="Feature reduction (default: grouped). "
+                        "cca: canonical correlation maximizing cross-person coupling. "
+                        "grouped-pca: PCA within each of the 4 grouped dimensions. "
+                        "cluster: hierarchical clustering of features, PCA per cluster.")
+    p.add_argument("--n-components", type=int, default=5,
+                   help="Number of components (default: 5). Meaning depends on method: "
+                        "pca/fa/ica/cca = total components; "
+                        "grouped-pca = components per group; "
+                        "cluster = number of feature clusters; "
+                        "grouped = ignored (always 4); every = ignored")
     p.add_argument("--window-size", type=float, default=30, help="Window size in seconds (default: 30)")
     p.add_argument("--step-size", type=float, default=5, help="Window step in seconds (default: 5)")
     p.add_argument("--time-resolution", type=float, default=0.5, help="Bin size in seconds (default: 0.5)")
     p.add_argument("--permutations", type=int, default=1000, help="Surrogate permutations (default: 1000)")
     p.add_argument("--lag-range", default="-10:10",
                    help="Lag range in seconds as min:max (default: -10:10)")
+    p.add_argument("--output-resolution", type=float, default=None,
+                   help="Interpolated output resolution in seconds (default: same as --time-resolution). "
+                        "Set to 0 to skip interpolation and output at window-step resolution.")
     p.add_argument("--no-zscore", action="store_true", help="Skip z-scoring")
     p.add_argument("--seed", type=int, default=42, help="Random seed (default: 42)")
     p.add_argument("--overwrite", action="store_true", help="Overwrite existing output")
@@ -95,11 +108,188 @@ def _parse_lag_range(lag_str, bin_size):
 
 
 # ---------------------------------------------------------------------------
+# Reduction helpers (CCA, grouped-PCA, cluster)
+# ---------------------------------------------------------------------------
+
+# Group definitions matching compute_grouped_dimensions in utils.py
+_GROUPED_PCA_GROUPS = {
+    "movement": lambda cols: [c for c in cols if c.startswith("GMP_world_")],
+    "vocal": lambda cols: [c for c in cols
+                           if c.startswith("oc_audvol") or c.startswith("oc_audpit")],
+    "spectral": lambda cols: [c for c in cols
+                              if c.startswith("lbrs_")
+                              and not c.endswith("_singlevalue")
+                              and c != "lbrs_tempo"],
+    "opensmile": lambda cols: [c for c in cols if c.startswith("osm_")],
+}
+
+
+def _reduce_cca(filt_a, filt_b, n_components):
+    """CCA: find dimensions maximizing cross-person correlation.
+
+    Returns (data_a, data_b, dim_names, metadata_dict).
+    """
+    from sklearn.cross_decomposition import CCA
+
+    scaler_a, scaler_b = StandardScaler(), StandardScaler()
+    scaled_a = np.nan_to_num(scaler_a.fit_transform(filt_a), nan=0.0)
+    scaled_b = np.nan_to_num(scaler_b.fit_transform(filt_b), nan=0.0)
+
+    n_comp = min(n_components, scaled_a.shape[1], scaled_b.shape[1], scaled_a.shape[0])
+    print(f"\nReducing features (CCA, {n_comp} components)...")
+
+    cca = CCA(n_components=n_comp)
+    data_a, data_b = cca.fit_transform(scaled_a, scaled_b)
+    dim_names = [f"CCA{i+1}" for i in range(n_comp)]
+
+    # Build loadings DataFrame
+    feature_names = list(filt_a.columns)
+    loading_rows = []
+    for i in range(n_comp):
+        for j, fname in enumerate(feature_names):
+            if j < cca.x_weights_.shape[0]:
+                loading_rows.append({
+                    "component": dim_names[i], "person": "A",
+                    "feature": fname, "loading": float(cca.x_weights_[j, i]),
+                })
+            if j < cca.y_weights_.shape[0]:
+                loading_rows.append({
+                    "component": dim_names[i], "person": "B",
+                    "feature": fname, "loading": float(cca.y_weights_[j, i]),
+                })
+
+    loadings_df = pd.DataFrame(loading_rows)
+    metadata = {"cca_loadings": loadings_df}
+
+    # Print top 3 features per component per person
+    for comp in dim_names:
+        for person in ("A", "B"):
+            sub = loadings_df[(loadings_df["component"] == comp) &
+                              (loadings_df["person"] == person)]
+            top = sub.reindex(sub["loading"].abs().nlargest(3).index)
+            top_str = ", ".join(
+                f"{r['feature']}({r['loading']:+.3f})" for _, r in top.iterrows()
+            )
+            print(f"  {comp} Person {person} top: {top_str}")
+
+    print("  Note: CCA dimensions maximize cross-person correlation by construction.")
+    print("  Overall synchrony will be high; value is in temporal dynamics and feature loadings.")
+
+    return data_a, data_b, dim_names, metadata
+
+
+def _reduce_grouped_pca(filt_a, filt_b, n_components_per_group):
+    """PCA within each of the 4 grouped dimensions.
+
+    Returns (data_a, data_b, dim_names).
+    """
+    from sklearn.decomposition import PCA
+
+    print(f"\nReducing features (grouped-PCA, {n_components_per_group} components per group)...")
+    all_cols = list(filt_a.columns)
+    combined = pd.concat([filt_a, filt_b], axis=0)
+    n_a = len(filt_a)
+
+    parts_a, parts_b, dim_names = [], [], []
+
+    for group_name, col_selector in _GROUPED_PCA_GROUPS.items():
+        group_cols = col_selector(all_cols)
+        if not group_cols:
+            print(f"  {group_name}: no columns found, skipping")
+            continue
+
+        group_data = combined[group_cols].values
+        group_data = np.nan_to_num(StandardScaler().fit_transform(group_data), nan=0.0)
+
+        n_comp = min(n_components_per_group, len(group_cols), group_data.shape[0])
+        pca = PCA(n_components=n_comp)
+        transformed = pca.fit_transform(group_data)
+
+        var_explained = pca.explained_variance_ratio_
+        var_str = ", ".join(f"{v:.1%}" for v in var_explained)
+        print(f"  {group_name}: {len(group_cols)} cols -> {n_comp} PCs "
+              f"(variance: {var_str}, total: {sum(var_explained):.1%})")
+
+        parts_a.append(transformed[:n_a])
+        parts_b.append(transformed[n_a:])
+        dim_names.extend(f"{group_name}_PC{k+1}" for k in range(n_comp))
+
+    if not parts_a:
+        sys.exit("Error: grouped-pca found no feature groups")
+
+    data_a = np.column_stack(parts_a)
+    data_b = np.column_stack(parts_b)
+    return data_a, data_b, dim_names
+
+
+def _reduce_cluster(filt_a, filt_b, n_clusters):
+    """Cluster features by correlation, PCA(1) per cluster.
+
+    Returns (data_a, data_b, dim_names, metadata_dict).
+    """
+    from scipy.cluster.hierarchy import linkage, fcluster
+    from sklearn.decomposition import PCA
+
+    print(f"\nReducing features (cluster, {n_clusters} clusters)...")
+    combined = pd.concat([filt_a, filt_b], axis=0)
+    n_a = len(filt_a)
+    feature_names = list(filt_a.columns)
+
+    scaled = np.nan_to_num(StandardScaler().fit_transform(combined), nan=0.0)
+
+    # Correlation-distance matrix between features (columns)
+    corr = np.corrcoef(scaled.T)
+    corr = np.nan_to_num(corr, nan=0.0)
+    dist = 1 - np.abs(corr)
+    np.fill_diagonal(dist, 0)
+
+    # Condensed distance for linkage
+    from scipy.spatial.distance import squareform
+    dist_condensed = squareform(dist, checks=False)
+    Z = linkage(dist_condensed, method="ward")
+
+    labels = fcluster(Z, t=n_clusters, criterion="maxclust")
+
+    # Build cluster assignments
+    assign_rows = [{"feature": f, "cluster": int(c)}
+                   for f, c in zip(feature_names, labels)]
+    assignments_df = pd.DataFrame(assign_rows)
+    metadata = {"cluster_assignments": assignments_df}
+
+    # PCA(1) per cluster
+    parts_a, parts_b, dim_names = [], [], []
+    for cid in sorted(set(labels)):
+        cluster_cols = [feature_names[i] for i in range(len(feature_names)) if labels[i] == cid]
+        cluster_data = scaled[:, [i for i in range(len(feature_names)) if labels[i] == cid]]
+
+        pca = PCA(n_components=1)
+        transformed = pca.fit_transform(cluster_data)
+
+        parts_a.append(transformed[:n_a])
+        parts_b.append(transformed[n_a:])
+        dim_names.append(f"cluster_{cid}")
+
+        preview = cluster_cols[:3]
+        extra = f" +{len(cluster_cols)-3} more" if len(cluster_cols) > 3 else ""
+        print(f"  cluster_{cid}: {', '.join(preview)}{extra} "
+              f"({len(cluster_cols)} features, var={pca.explained_variance_ratio_[0]:.1%})")
+
+    data_a = np.column_stack(parts_a)
+    data_b = np.column_stack(parts_b)
+    return data_a, data_b, dim_names, metadata
+
+
+# ---------------------------------------------------------------------------
 # Preprocessing
 # ---------------------------------------------------------------------------
 
 def preprocess_pair(args):
-    """Load, bin, filter, reduce, align both persons. Returns aligned data."""
+    """Load, bin, filter, reduce, align both persons.
+
+    Returns (data_a, data_b, dim_names, bin_times, reduction_metadata).
+    *reduction_metadata* is a dict that may contain DataFrames such as
+    ``cca_loadings`` or ``cluster_assignments`` for saving to disk.
+    """
     print("Loading Person A...")
     df_a = load_features(args.person_a)
     print("Loading Person B...")
@@ -131,6 +321,7 @@ def preprocess_pair(args):
     print(f"  Shared columns: {len(shared_cols)}")
 
     method = args.reduce_features if args.reduce_features != "all" else "grouped"
+    reduction_metadata = {}
 
     if method in ("pca", "fa", "ica"):
         # Fit reduction on concatenated data for shared component space
@@ -141,6 +332,12 @@ def preprocess_pair(args):
         data_a = comp_df.iloc[:n].values
         data_b = comp_df.iloc[n:].values
         dim_names = list(comp_df.columns)
+
+    elif method == "cca":
+        data_a, data_b, dim_names, reduction_metadata = _reduce_cca(
+            filt_a, filt_b, args.n_components
+        )
+
     elif method == "grouped":
         print("\nComputing grouped dimensions...")
         grp_a, _ = compute_grouped_dimensions(df_a, filt_a, args.time_resolution)
@@ -149,6 +346,17 @@ def preprocess_pair(args):
         data_a = np.column_stack([grp_a[d] for d in shared_dims])
         data_b = np.column_stack([grp_b[d] for d in shared_dims])
         dim_names = shared_dims
+
+    elif method == "grouped-pca":
+        data_a, data_b, dim_names = _reduce_grouped_pca(
+            filt_a, filt_b, args.n_components
+        )
+
+    elif method == "cluster":
+        data_a, data_b, dim_names, reduction_metadata = _reduce_cluster(
+            filt_a, filt_b, args.n_components
+        )
+
     elif method == "every":
         data_a = filt_a.values
         data_b = filt_b.values
@@ -171,7 +379,7 @@ def preprocess_pair(args):
     bin_times = common.values * args.time_resolution
 
     print(f"  Final: {data_a.shape[0]} bins x {data_a.shape[1]} dimensions")
-    return data_a, data_b, dim_names, bin_times
+    return data_a, data_b, dim_names, bin_times, reduction_metadata
 
 
 # ---------------------------------------------------------------------------
@@ -891,6 +1099,94 @@ def write_summary_report(path, args, selected_methods, summary_df, leader_df):
 
 
 # ---------------------------------------------------------------------------
+# WIDE-FORMAT OUTPUT
+# ---------------------------------------------------------------------------
+
+def _build_wide_timeseries(long_frames, granger_dynamics, output_resolution, time_resolution):
+    """Pivot long-format windowed results into wide format and interpolate.
+
+    Parameters
+    ----------
+    long_frames : list[DataFrame]
+        DataFrames with columns ``window_time``, ``dimension``, and metric
+        columns (e.g. ``pearson_r``, ``crosscorr_r``).
+    granger_dynamics : DataFrame or None
+        Windowed Granger results (``window_time``, ``dimension``,
+        ``granger_F_AtoB``, etc.).
+    output_resolution : float
+        Target time resolution for interpolation.  If ``0``, output at
+        the native window-step resolution with no interpolation.
+    time_resolution : float
+        The ``--time-resolution`` value (fallback when *output_resolution*
+        is ``None``).
+
+    Returns
+    -------
+    DataFrame
+        Wide-format: ``time_seconds`` + one column per ``{metric}_{dimension}``.
+    """
+    # Collect all long-format sources
+    sources = list(long_frames)
+    if granger_dynamics is not None and not granger_dynamics.empty:
+        sources.append(granger_dynamics)
+
+    if not sources:
+        return pd.DataFrame()
+
+    # Merge all long-format frames on (window_time, dimension)
+    merged_long = sources[0]
+    for df in sources[1:]:
+        if "window_time" in df.columns and "dimension" in df.columns:
+            merged_long = merged_long.merge(df, on=["window_time", "dimension"], how="outer")
+
+    # Identify metric columns (everything except window_time and dimension)
+    meta_cols = {"window_time", "dimension"}
+    metric_cols = [c for c in merged_long.columns if c not in meta_cols]
+
+    # Pivot: for each metric, create {metric}_{dimension} columns
+    wide_parts = []
+    for metric in metric_cols:
+        sub = merged_long[["window_time", "dimension", metric]].dropna(subset=[metric])
+        if sub.empty:
+            continue
+        # Skip non-numeric columns (e.g. crosscorr_leader, granger_leader)
+        if not np.issubdtype(sub[metric].dtype, np.number):
+            continue
+        pivoted = sub.pivot(index="window_time", columns="dimension", values=metric)
+        pivoted.columns = [f"{metric}_{dim}" for dim in pivoted.columns]
+        wide_parts.append(pivoted)
+
+    if not wide_parts:
+        return pd.DataFrame()
+
+    wide = pd.concat(wide_parts, axis=1).sort_index()
+    window_times = wide.index.values
+
+    # Determine effective output resolution
+    out_res = output_resolution if output_resolution is not None else time_resolution
+
+    if out_res == 0 or len(window_times) < 2:
+        # No interpolation -- output at native window-step resolution
+        wide.index.name = "time_seconds"
+        return wide.reset_index()
+
+    # Interpolate to regular grid
+    t_min, t_max = window_times.min(), window_times.max()
+    out_times = np.arange(t_min, t_max + out_res * 0.5, out_res)
+
+    interp_data = {"time_seconds": out_times}
+    for col in wide.columns:
+        vals = wide[col].values
+        mask = np.isfinite(vals)
+        if mask.sum() < 2:
+            interp_data[col] = np.full(len(out_times), np.nan)
+        else:
+            interp_data[col] = np.interp(out_times, window_times[mask], vals[mask])
+
+    return pd.DataFrame(interp_data)
+
+
+# ---------------------------------------------------------------------------
 # MAIN
 # ---------------------------------------------------------------------------
 
@@ -919,7 +1215,17 @@ def main():
         selected.remove("wavelet")
 
     # Preprocess
-    data_a, data_b, dim_names, bin_times = preprocess_pair(args)
+    data_a, data_b, dim_names, bin_times, reduction_metadata = preprocess_pair(args)
+
+    # Save reduction metadata
+    if "cca_loadings" in reduction_metadata:
+        path = out_dir / "cca_loadings.csv"
+        reduction_metadata["cca_loadings"].to_csv(path, index=False, float_format="%.6f")
+        print(f"  Saved: {path}")
+    if "cluster_assignments" in reduction_metadata:
+        path = out_dir / "cluster_assignments.csv"
+        reduction_metadata["cluster_assignments"].to_csv(path, index=False)
+        print(f"  Saved: {path}")
 
     # Run methods
     all_ts_frames = []
@@ -1042,14 +1348,26 @@ def main():
     # Merge outputs
     print("\n\nSaving outputs...")
 
-    # Synchrony timeseries
+    # Windowed synchrony -- long format (preserved for users who prefer it)
     if all_ts_frames:
         ts_merged = all_ts_frames[0]
         for df in all_ts_frames[1:]:
             if "window_time" in df.columns and "dimension" in df.columns:
                 ts_merged = ts_merged.merge(df, on=["window_time", "dimension"], how="outer")
-        ts_merged.to_csv(out_dir / "synchrony_timeseries.csv", index=False, float_format="%.6f")
-        print(f"  Saved: {out_dir / 'synchrony_timeseries.csv'} ({len(ts_merged)} rows)")
+        ts_merged.to_csv(out_dir / "windowed_synchrony_long.csv", index=False, float_format="%.6f")
+        print(f"  Saved: {out_dir / 'windowed_synchrony_long.csv'} ({len(ts_merged)} rows)")
+
+    # Synchrony timeseries -- wide format (one row per timepoint)
+    if all_ts_frames or (granger_dynamics is not None and not granger_dynamics.empty):
+        wide_ts = _build_wide_timeseries(
+            all_ts_frames, granger_dynamics,
+            output_resolution=args.output_resolution,
+            time_resolution=args.time_resolution,
+        )
+        if not wide_ts.empty:
+            wide_ts.to_csv(out_dir / "synchrony_timeseries.csv", index=False, float_format="%.6f")
+            print(f"  Saved: {out_dir / 'synchrony_timeseries.csv'} "
+                  f"({len(wide_ts)} rows x {len(wide_ts.columns)} cols, wide format)")
 
     # Summary — prefix columns per method to avoid duplicates, then merge on dimension
     if all_summary_frames:
@@ -1080,15 +1398,15 @@ def main():
         leader_df.to_csv(out_dir / "leader_follower.csv", index=False, float_format="%.6f")
         print(f"  Saved: {out_dir / 'leader_follower.csv'}")
 
-    # Transition dynamics
+    # Windowed Granger (formerly transition_dynamics.csv)
     if granger_dynamics is not None and not granger_dynamics.empty:
-        granger_dynamics.to_csv(out_dir / "transition_dynamics.csv", index=False, float_format="%.6f")
-        print(f"  Saved: {out_dir / 'transition_dynamics.csv'}")
+        granger_dynamics.to_csv(out_dir / "windowed_granger.csv", index=False, float_format="%.6f")
+        print(f"  Saved: {out_dir / 'windowed_granger.csv'}")
 
-    # Phase dynamics (wavelet)
+    # Wavelet timeseries (formerly phase_dynamics.csv)
     if phase_dynamics is not None:
-        phase_dynamics.to_csv(out_dir / "phase_dynamics.csv", index=False, float_format="%.6f")
-        print(f"  Saved: {out_dir / 'phase_dynamics.csv'}")
+        phase_dynamics.to_csv(out_dir / "wavelet_timeseries.csv", index=False, float_format="%.6f")
+        print(f"  Saved: {out_dir / 'wavelet_timeseries.csv'}")
 
     # Plots
     print("\nGenerating plots...")

@@ -11,6 +11,7 @@ SocialCurrents is a multimodal feature extraction and analysis toolkit for socia
 - [Pipeline overview](#pipeline-overview)
 - [Requirements](#requirements)
 - [Installation](#installation)
+- [Recommended project structure](#recommended-project-structure)
 - [Quick start](#quick-start)
 - [Usage](#usage)
 - [Command reference](#command-reference)
@@ -66,38 +67,64 @@ export HF_TOKEN="hf_your_token_here"
 
 Add this line to `~/.zshrc` or `~/.bash_profile` so it persists across sessions.
 
+## Recommended project structure
+
+Install SocialCurrents once, anywhere on your machine:
+
+```
+~/tools/socialcurrents/    (or wherever you cloned it)
+```
+
+Then organize each study as its own project:
+
+```
+~/studies/my_study/
+  data/
+    videos/               # input video files (dyad002_sub003.MP4, ...)
+    ratings/              # continuous trait ratings
+      trustworthiness/
+      extraversion/
+    questionnaires/       # post-interaction surveys
+    neural/               # fNIRS, EEG, or fMRI recordings
+  output/                 # all pipeline output goes here
+```
+
+> **Note:** All example commands in this README assume you are running from the SocialCurrents directory and pointing to your project paths. The pipeline works with any directory structure -- just adjust the `-i`, `-t`, and `-o` paths.
+
 ## Quick start
 
 ```bash
 git clone https://github.com/ohdanieldw/socialcurrents.git
 cd socialcurrents
 bash setup_macos.sh
-bash run_macos.sh -i data/dyad002_sub003.MP4 -o output/
+bash run_macos.sh -i ~/studies/my_study/data/videos/ \
+  -o ~/studies/my_study/output/ --normalize-fps
 ```
 
 ## Usage
 
 ```bash
 # Run on a folder of video files
-bash run_macos.sh -i data/ -o output/
+bash run_macos.sh -i ~/studies/my_study/data/videos/ -o ~/studies/my_study/output/
 
 # Skip CPU-prohibitive extractors (recommended on CPU-only machines)
-bash run_macos.sh -i data/ -o output/ --skip-slow
+bash run_macos.sh -i ~/studies/my_study/data/videos/ -o ~/studies/my_study/output/ --skip-slow
 
 # Run only specific feature extractors (faster)
-bash run_macos.sh -i data/ -o output/ -f basic_audio,mediapipe_pose_vision,pyfeat_vision
+bash run_macos.sh -i ~/studies/my_study/data/videos/ -o ~/studies/my_study/output/ \
+  -f basic_audio,mediapipe_pose_vision,pyfeat_vision
 
 # Process a single video file
-bash run_macos.sh -i data/dyad002_sub003.MP4 -o output/
+bash run_macos.sh -i ~/studies/my_study/data/videos/dyad002_sub003.MP4 -o ~/studies/my_study/output/
 
 # Reprocess files even if output already exists
-bash run_macos.sh -i data/ -o output/ --overwrite
+bash run_macos.sh -i ~/studies/my_study/data/videos/ -o ~/studies/my_study/output/ --overwrite
 
 # Fix variable-frame-rate videos automatically (re-encodes to 25 fps)
-bash run_macos.sh -i data/ -o output/ --normalize-fps
+bash run_macos.sh -i ~/studies/my_study/data/videos/ -o ~/studies/my_study/output/ --normalize-fps
 
 # Round CSV floats to 2 decimal places (default: 3)
-bash run_macos.sh -i data/ -o output/ --decimal-places 2
+bash run_macos.sh -i ~/studies/my_study/data/videos/ -o ~/studies/my_study/output/ --decimal-places 2
 
 # See all available extractors
 bash run_macos.sh --list-features
@@ -111,17 +138,19 @@ If an extractor fails (e.g., missing dependency, incompatible model), the pipeli
 
 **"I want movement and facial data only"**
 ```bash
-bash run_macos.sh -i data/ -f mediapipe_pose_vision,pyfeat_vision,emotieffnet_vision
+bash run_macos.sh -i ~/studies/my_study/data/videos/ -o ~/studies/my_study/output/ \
+  -f mediapipe_pose_vision,pyfeat_vision,emotieffnet_vision
 ```
 
 **"I want speech and language features"**
 ```bash
-bash run_macos.sh -i data/ -f basic_audio,librosa_spectral,whisperx_transcription,deberta_text,sbert_text
+bash run_macos.sh -i ~/studies/my_study/data/videos/ -o ~/studies/my_study/output/ \
+  -f basic_audio,librosa_spectral,whisperx_transcription,deberta_text,sbert_text
 ```
 
 **"I want everything"**
 ```bash
-bash run_macos.sh -i data/ -o output/
+bash run_macos.sh -i ~/studies/my_study/data/videos/ -o ~/studies/my_study/output/
 ```
 
 ### Input filename convention
@@ -167,15 +196,17 @@ All the flags you can pass to `run_macos.sh` (or `python extract.py`), explained
 Each subject gets its own subfolder nested under their dyad:
 
 ```
-output/
+~/studies/my_study/output/
   dyad002/
     sub003/
-      dyad002_sub003_timeseries_features.csv   <- one row per video frame
-      dyad002_sub003_summary_features.csv      <- one row per recording
-      dyad002_sub003_summary_features.json     <- nested JSON with model metadata
-      dyad002_sub003.log                       <- processing log for this subject
+      extract/
+        dyad002_sub003_timeseries_features.csv   <- one row per video frame
+        dyad002_sub003_summary_features.csv      <- one row per recording
+        dyad002_sub003_summary_features.json     <- nested JSON with model metadata
+        dyad002_sub003.log                       <- processing log for this subject
     sub007/
-      ...
+      extract/
+        ...
 ```
 
 ### Time-series CSV (`{prefix}_timeseries_features.csv`)
@@ -203,7 +234,7 @@ The primary analysis output. Each row represents one video frame.
 ```python
 import pandas as pd
 
-ts = pd.read_csv("output/dyad002/sub003/extract/dyad002_sub003_timeseries_features.csv")
+ts = pd.read_csv("~/studies/my_study/output/dyad002/sub003/extract/dyad002_sub003_timeseries_features.csv")
 
 # Pose visibility for left wrist landmark over time
 ts.plot(x="time_seconds", y="GMP_land_visi_16")
@@ -234,8 +265,10 @@ Nested structure grouped by model. Large arrays (>1000 elements) are stored as s
 
 All output follows a neuroimaging-style directory convention. Subject-level analyses are stored under each subject's own folder. Dyad-level analyses (synchrony) go under a joint folder named with both subject IDs, lower-numbered subject first. Use `--output-dir` (`-o`) to point to the appropriate nested path.
 
+Folder names use `_from_` for directional prediction (DV_from_IV, matching APA convention) and `_by_` for non-directional grouping comparisons.
+
 ```
-output/
+~/studies/my_study/output/
   dyad005/
     sub009/
       describe/
@@ -251,6 +284,17 @@ output/
       map_states/
     sub009_sub010/
       synchrony/
+        grouped/            # --reduce-features grouped
+        pca/
+        cca/                # + cca_loadings.csv
+        grouped-pca/
+        cluster/            # + cluster_assignments.csv
+      trust_from_synch/     # trustworthiness predicted from synchrony
+        grouped/
+      synch_from_features/  # synchrony predicted from person B features
+        grouped/
+      synch_by_states/      # synchrony compared by behavioral state
+        grouped/
 ```
 
 ## Feature extractors
@@ -534,7 +578,7 @@ python analysis/synchronize.py \
   -o results/
 ```
 
-The only requirement is that each CSV has a time column (named `time_seconds` or `VideoTime` in milliseconds) and numeric feature columns.
+The only requirement is that each CSV has a time column (named `time_seconds`, `time`, `window_time`, `time_second`, `Timestamp`, or `VideoTime`; millisecond columns are auto-converted) and numeric feature columns.
 
 ### `describe.py`: Understand Your Data
 
@@ -543,11 +587,11 @@ Generates a comprehensive descriptive summary of your extracted features before 
 ```bash
 # Single subject
 python analysis/describe.py \
-  -f output/dyad005/sub010/extract/dyad005_sub010_timeseries_features.csv \
-  -o output/dyad005/sub010/describe/
+  -f ~/studies/my_study/output/dyad005/sub010/extract/dyad005_sub010_timeseries_features.csv \
+  -o ~/studies/my_study/output/dyad005/sub010/describe/
 
 # Batch: all subjects in a directory
-python analysis/describe.py -f output/ -o output/
+python analysis/describe.py -f ~/studies/my_study/output/ -o ~/studies/my_study/output/
 ```
 
 Accepts any timeseries CSV, not just SocialCurrents output.
@@ -559,18 +603,18 @@ Computes lagged cross-correlation between extracted behavioral features and exte
 ```bash
 # Single: behavioral features vs. trustworthiness rating
 python analysis/correlate.py --mode single \
-  -f output/dyad005/sub010/extract/dyad005_sub010_timeseries_features.csv \
-  -t data/Trait/Trustworthiness/sub009rating.csv \
+  -f ~/studies/my_study/output/dyad005/sub010/extract/dyad005_sub010_timeseries_features.csv \
+  -t ~/studies/my_study/data/ratings/trustworthiness/sub009rating.csv \
   --reduce-features pca --n-components 5 --label Trustworthiness \
-  -o output/dyad005/sub010/correlate/
+  -o ~/studies/my_study/output/dyad005/sub010/correlate/
 
 # Multi: behavioral features vs. fNIRS with ROI averaging
 python analysis/correlate.py --mode multi \
-  -f output/dyad005/sub010/extract/dyad005_sub010_timeseries_features.csv \
-  -t data/fNIRS/dyad005_sub009_fnirs.csv \
+  -f ~/studies/my_study/output/dyad005/sub010/extract/dyad005_sub010_timeseries_features.csv \
+  -t ~/studies/my_study/data/neural/dyad005_sub009_fnirs.csv \
   --reduce-features pca --reduce-target roi-average \
-  --roi-config data/fNIRS/roi_config.json \
-  -o output/dyad005/sub009/correlate/
+  --roi-config ~/studies/my_study/data/neural/roi_config.json \
+  -o ~/studies/my_study/output/dyad005/sub009/correlate/
 ```
 
 Works with any target signal: dynamic ratings, heart rate, fNIRS, synchrony timeseries, or any CSV with a time column.
@@ -582,14 +626,14 @@ Segments a conversation into distinct behavioral states using Hidden Markov Mode
 ```bash
 # Single subject
 python analysis/segment.py \
-  -f output/dyad005/sub010/extract/dyad005_sub010_timeseries_features.csv \
+  -f ~/studies/my_study/output/dyad005/sub010/extract/dyad005_sub010_timeseries_features.csv \
   --method hmm --n-states auto --max-states 8 \
   --state-selection elbow \
   --reduce-features pca --n-components 5 \
-  -o output/dyad005/sub010/segments/
+  -o ~/studies/my_study/output/dyad005/sub010/segments/
 
 # Batch: all subjects in a directory
-python analysis/segment.py -f output/ -o output/
+python analysis/segment.py -f ~/studies/my_study/output/ -o ~/studies/my_study/output/
 ```
 
 Works on any timeseries CSV: behavioral features, physiological recordings, or neural data.
@@ -609,12 +653,14 @@ All methods support lagged analysis and permutation-based surrogate testing for 
 
 ```bash
 python analysis/synchronize.py \
-  --person-a output/dyad005/sub009/extract/dyad005_sub009_timeseries_features.csv \
-  --person-b output/dyad005/sub010/extract/dyad005_sub010_timeseries_features.csv \
+  --person-a ~/studies/my_study/output/dyad005/sub009/extract/dyad005_sub009_timeseries_features.csv \
+  --person-b ~/studies/my_study/output/dyad005/sub010/extract/dyad005_sub010_timeseries_features.csv \
   --methods pearson,crosscorr,rqa,granger,coherence \
   --reduce-features grouped --window-size 30 \
-  -o output/dyad005/sub009_sub010/synchrony/
+  -o ~/studies/my_study/output/dyad005/sub009_sub010/synchrony/
 ```
+
+**Feature reduction options:** `--reduce-features` controls how each person's 400+ features are reduced to a smaller set of dimensions before synchrony is computed. The default (`grouped`) uses 4 interpretable dimensions. Additional options include `cca` (canonical correlation analysis, which finds dimensions maximizing cross-person coupling -- useful for identifying which behavioral channels are most coordinated), `grouped-pca` (PCA within each of the 4 groups, giving finer-grained dimensions), and `cluster` (hierarchical clustering of features into `--n-components` groups, then PCA per cluster).
 
 Works with any pair of timeseries CSVs: behavioral features, physiological signals, or neural recordings.
 
@@ -624,49 +670,79 @@ After segmenting a conversation with `segment.py`, use this tool to test whether
 
 ```bash
 python analysis/map_states.py \
-  --states output/dyad005/sub010/segments/segments.csv \
-  --signal data/Trait/Trustworthiness/sub009rating.csv \
+  --states ~/studies/my_study/output/dyad005/sub010/segments/segments.csv \
+  --signal ~/studies/my_study/data/ratings/trustworthiness/sub009rating.csv \
   --signal-col Value --signal-label Trustworthiness \
   --rater sub009 --target sub010 \
-  -o output/dyad005/sub010/map_states/
+  -o ~/studies/my_study/output/dyad005/sub010/map_states/
 ```
 
 The signal can be anything: trait ratings, heart rate, synchrony values, neural activation. Any CSV with a time and value column.
 
 ### Combining tools
 
-The analysis tools accept any timeseries CSV as input, so you can chain them to answer multi-level questions. Below are common recipes.
+The analysis tools accept any timeseries CSV as input, so you can chain them to answer multi-level questions. Below are common recipes. All examples use shell variables for readability:
+
+```bash
+STUDY=~/studies/my_study
+OUT=$STUDY/output
+DATA=$STUDY/data
+```
 
 **Does interpersonal synchrony predict trait impressions?**
 
-First compute synchrony, then correlate the synchrony timeseries with dynamic ratings.
+Compute synchrony, then correlate the wide-format synchrony timeseries with dynamic ratings. Use `--select-features` to focus on specific synchrony metrics.
 ```bash
 # Step 1: Compute synchrony
 python analysis/synchronize.py \
-  --person-a output/dyad005/sub009/extract/dyad005_sub009_timeseries_features.csv \
-  --person-b output/dyad005/sub010/extract/dyad005_sub010_timeseries_features.csv \
+  --person-a $OUT/dyad005/sub009/extract/dyad005_sub009_timeseries_features.csv \
+  --person-b $OUT/dyad005/sub010/extract/dyad005_sub010_timeseries_features.csv \
   --methods pearson,crosscorr,granger \
   --reduce-features grouped \
-  -o output/dyad005/sub009_sub010/synchrony/
+  -o $OUT/dyad005/sub009_sub010/synchrony/
 
 # Step 2: Correlate synchrony with trustworthiness ratings
 python analysis/correlate.py --mode single \
-  -f output/dyad005/sub009_sub010/synchrony/synchrony_timeseries.csv \
-  -t data/Trait/Trustworthiness/sub009rating.csv \
+  -f $OUT/dyad005/sub009_sub010/synchrony/synchrony_timeseries.csv \
+  -t $DATA/ratings/trustworthiness/sub009rating.csv \
+  --select-features "pearson_r_*,crosscorr_r_*" \
   --reduce-features every --label Trustworthiness \
-  -o output/dyad005/sub009_sub010/synch_x_trust/
+  -o $OUT/dyad005/sub009_sub010/trust_from_synch/
 ```
 
 **Which behavioral features drive synchrony?**
 
-Correlate one person's extracted features with the dyad's synchrony timeseries.
+Use synchrony_timeseries.csv as the target and extracted features as input. Pick a single synchrony column with `--target-col`.
 ```bash
 python analysis/correlate.py --mode single \
-  -f output/dyad005/sub010/extract/dyad005_sub010_timeseries_features.csv \
-  -t output/dyad005/sub009_sub010/synchrony/synchrony_timeseries.csv \
-  --target-col pearson_r --label "Movement Synchrony" \
+  -f $OUT/dyad005/sub010/extract/dyad005_sub010_timeseries_features.csv \
+  -t $OUT/dyad005/sub009_sub010/synchrony/synchrony_timeseries.csv \
+  --target-col pearson_r_movement_energy --label "Movement Synchrony" \
   --reduce-features pca --n-components 5 \
-  -o output/dyad005/sub009_sub010/synch_x_features/
+  -o $OUT/dyad005/sub009_sub010/synch_from_features/
+```
+
+**Multi-mode: all synchrony measures vs all features**
+
+Cross all feature dimensions against all synchrony columns simultaneously.
+```bash
+python analysis/correlate.py --mode multi \
+  -f $OUT/dyad005/sub010/extract/dyad005_sub010_timeseries_features.csv \
+  -t $OUT/dyad005/sub009_sub010/synchrony/synchrony_timeseries.csv \
+  --reduce-features pca --reduce-target none \
+  --label "Synchrony" \
+  -o $OUT/dyad005/sub009_sub010/synch_from_features_multi/
+```
+
+**Wavelet phase vs ratings**
+
+Use the wavelet coherence/phase timeseries to predict ratings.
+```bash
+python analysis/correlate.py --mode single \
+  -f $OUT/dyad005/sub009_sub010/synchrony/wavelet_timeseries.csv \
+  -t $DATA/ratings/trustworthiness/sub009rating.csv \
+  --reduce-features every --label Trustworthiness \
+  -o $OUT/dyad005/sub009_sub010/trust_from_wavelet/
 ```
 
 **Do conversational states differ in synchrony?**
@@ -675,16 +751,16 @@ Segment the conversation, then test whether synchrony is higher in some states t
 ```bash
 # Step 1: Segment
 python analysis/segment.py \
-  -f output/dyad005/sub010/extract/dyad005_sub010_timeseries_features.csv \
+  -f $OUT/dyad005/sub010/extract/dyad005_sub010_timeseries_features.csv \
   --method hmm --n-states auto \
-  -o output/dyad005/sub010/segments/
+  -o $OUT/dyad005/sub010/segments/
 
 # Step 2: Map synchrony onto states
 python analysis/map_states.py \
-  --states output/dyad005/sub010/segments/segments.csv \
-  --signal output/dyad005/sub009_sub010/synchrony/synchrony_timeseries.csv \
-  --signal-col pearson_r --signal-label "Movement Synchrony" \
-  -o output/dyad005/sub009_sub010/states_x_synch/
+  --states $OUT/dyad005/sub010/segments/segments.csv \
+  --signal $OUT/dyad005/sub009_sub010/synchrony/synchrony_timeseries.csv \
+  --signal-col pearson_r_movement_energy --signal-label "Movement Synchrony" \
+  -o $OUT/dyad005/sub009_sub010/synch_by_states/
 ```
 
 **Do conversational states predict impression change?**
@@ -693,17 +769,17 @@ The core analysis for linking behavioral dynamics to social perception.
 ```bash
 # Step 1: Segment
 python analysis/segment.py \
-  -f output/dyad005/sub010/extract/dyad005_sub010_timeseries_features.csv \
+  -f $OUT/dyad005/sub010/extract/dyad005_sub010_timeseries_features.csv \
   --method hmm --n-states auto \
-  -o output/dyad005/sub010/segments/
+  -o $OUT/dyad005/sub010/segments/
 
 # Step 2: Map ratings onto states
 python analysis/map_states.py \
-  --states output/dyad005/sub010/segments/segments.csv \
-  --signal data/Trait/Trustworthiness/sub009rating.csv \
+  --states $OUT/dyad005/sub010/segments/segments.csv \
+  --signal $DATA/ratings/trustworthiness/sub009rating.csv \
   --signal-col Value --signal-label Trustworthiness \
   --rater sub009 --target sub010 \
-  -o output/dyad005/sub010/map_states/
+  -o $OUT/dyad005/sub010/map_states/
 ```
 
 **Do features predict neural responses?**
@@ -711,51 +787,53 @@ python analysis/map_states.py \
 Correlate extracted behavioral features with multi-channel fNIRS or EEG.
 ```bash
 python analysis/correlate.py --mode multi \
-  -f output/dyad005/sub010/extract/dyad005_sub010_timeseries_features.csv \
-  -t data/fNIRS/dyad005_sub010_fnirs.csv \
+  -f $OUT/dyad005/sub010/extract/dyad005_sub010_timeseries_features.csv \
+  -t $DATA/neural/dyad005_sub010_fnirs.csv \
   --reduce-features pca --reduce-target roi-average \
-  --roi-config data/fNIRS/roi_config.json \
+  --roi-config $DATA/neural/roi_config.json \
   --label "fNIRS activation" \
-  -o output/dyad005/sub010/features_x_fnirs/
+  -o $OUT/dyad005/sub010/fnirs_from_features/
 ```
 
 **Full pipeline: extraction → description → segmentation → synchrony → impression analysis**
 ```bash
+STUDY=~/studies/my_study
+OUT=$STUDY/output
+DATA=$STUDY/data
 DYAD=dyad005
 A=sub009
 B=sub010
-OUT=output/$DYAD
 
 # Extract
-bash run_macos.sh -i data/${DYAD}_${A}.MP4 -o $OUT --normalize-fps
-bash run_macos.sh -i data/${DYAD}_${B}.MP4 -o $OUT --normalize-fps
+bash run_macos.sh -i $DATA/videos/${DYAD}_${A}.MP4 -o $OUT --normalize-fps
+bash run_macos.sh -i $DATA/videos/${DYAD}_${B}.MP4 -o $OUT --normalize-fps
 
 # Describe
-python analysis/describe.py -f $OUT/$A/extract/${DYAD}_${A}_timeseries_features.csv -o $OUT/$A/describe/
-python analysis/describe.py -f $OUT/$B/extract/${DYAD}_${B}_timeseries_features.csv -o $OUT/$B/describe/
+python analysis/describe.py -f $OUT/$DYAD/$A/extract/${DYAD}_${A}_timeseries_features.csv -o $OUT/$DYAD/$A/describe/
+python analysis/describe.py -f $OUT/$DYAD/$B/extract/${DYAD}_${B}_timeseries_features.csv -o $OUT/$DYAD/$B/describe/
 
 # Segment
-python analysis/segment.py -f $OUT/$A/extract/${DYAD}_${A}_timeseries_features.csv --method hmm --n-states auto -o $OUT/$A/segments/
-python analysis/segment.py -f $OUT/$B/extract/${DYAD}_${B}_timeseries_features.csv --method hmm --n-states auto -o $OUT/$B/segments/
+python analysis/segment.py -f $OUT/$DYAD/$A/extract/${DYAD}_${A}_timeseries_features.csv --method hmm --n-states auto -o $OUT/$DYAD/$A/segments/
+python analysis/segment.py -f $OUT/$DYAD/$B/extract/${DYAD}_${B}_timeseries_features.csv --method hmm --n-states auto -o $OUT/$DYAD/$B/segments/
 
 # Synchrony
 python analysis/synchronize.py \
-  --person-a $OUT/$A/extract/${DYAD}_${A}_timeseries_features.csv \
-  --person-b $OUT/$B/extract/${DYAD}_${B}_timeseries_features.csv \
-  --methods all -o $OUT/${A}_${B}/synchrony/
+  --person-a $OUT/$DYAD/$A/extract/${DYAD}_${A}_timeseries_features.csv \
+  --person-b $OUT/$DYAD/$B/extract/${DYAD}_${B}_timeseries_features.csv \
+  --methods all -o $OUT/$DYAD/${A}_${B}/synchrony/
 
 # Correlate features with ratings
 python analysis/correlate.py --mode single \
-  -f $OUT/$B/extract/${DYAD}_${B}_timeseries_features.csv \
-  -t data/Trait/Trustworthiness/${A}rating.csv \
-  --label Trustworthiness -o $OUT/$B/correlate/
+  -f $OUT/$DYAD/$B/extract/${DYAD}_${B}_timeseries_features.csv \
+  -t $DATA/ratings/trustworthiness/${A}rating.csv \
+  --label Trustworthiness -o $OUT/$DYAD/$B/correlate/
 
 # Map states to ratings
 python analysis/map_states.py \
-  --states $OUT/$B/segments/segments.csv \
-  --signal data/Trait/Trustworthiness/${A}rating.csv \
+  --states $OUT/$DYAD/$B/segments/segments.csv \
+  --signal $DATA/ratings/trustworthiness/${A}rating.csv \
   --signal-col Value --signal-label Trustworthiness \
-  -o $OUT/$B/map_states/
+  -o $OUT/$DYAD/$B/map_states/
 ```
 
 ### Why this toolkit
@@ -807,7 +885,8 @@ Many models (Whisper, DeBERTa, MediaPipe, etc.) are downloaded on first use. Thi
 ### Running out of memory
 Use `-f` to select only the features you need:
 ```bash
-bash run_macos.sh -i data/ -f basic_audio,librosa_spectral,mediapipe_pose_vision,pyfeat_vision
+bash run_macos.sh -i ~/studies/my_study/data/videos/ -o ~/studies/my_study/output/ \
+  -f basic_audio,librosa_spectral,mediapipe_pose_vision,pyfeat_vision
 ```
 Vision models are the heaviest consumers. Audio-only runs are much lighter.
 

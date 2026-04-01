@@ -26,11 +26,41 @@ except ImportError:
 # Loading & alignment
 # ---------------------------------------------------------------------------
 
+_TIME_COL_CANDIDATES = ["time_seconds", "time", "window_time", "time_second"]
+_TIME_COL_MS = ["Timestamp", "VideoTime"]  # millisecond columns
+
+
+def _detect_time_column(df):
+    """Find and normalise the time column to ``time_seconds``.
+
+    Checks columns in priority order.  Millisecond columns (Timestamp,
+    VideoTime) are converted to seconds when values suggest ms (max > 1000).
+    Returns the (possibly mutated) DataFrame.
+    """
+    for col in _TIME_COL_CANDIDATES:
+        if col in df.columns:
+            if col != "time_seconds":
+                df = df.rename(columns={col: "time_seconds"})
+            return df
+
+    for col in _TIME_COL_MS:
+        if col in df.columns:
+            vals = df[col]
+            if vals.max() > 1000:
+                df["time_seconds"] = vals / 1000.0
+            else:
+                df["time_seconds"] = vals
+            return df
+
+    accepted = _TIME_COL_CANDIDATES + _TIME_COL_MS
+    sys.exit(f"Error: CSV must contain a time column. "
+             f"Accepted names: {', '.join(accepted)}")
+
+
 def load_features(path):
     """Load pipeline timeseries features CSV."""
     df = pd.read_csv(path)
-    if "time_seconds" not in df.columns:
-        sys.exit("Error: features CSV must contain a 'time_seconds' column")
+    df = _detect_time_column(df)
     print(f"  Loaded features: {df.shape[0]} rows x {df.shape[1]} columns")
     return df
 

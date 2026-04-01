@@ -2,6 +2,21 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Project Structure Convention
+
+SocialCurrents is installed once (e.g. `~/tools/socialcurrents/`). Each study is a separate directory:
+
+```
+~/studies/my_study/
+  data/
+    videos/             # input video files
+    ratings/            # continuous trait ratings by dimension
+    neural/             # fNIRS, EEG, fMRI
+  output/               # all pipeline output (follows neuroimaging convention below)
+```
+
+All commands run from the SocialCurrents directory, pointing `-i`, `-t`, and `-o` at the study paths.
+
 ## Running the Pipeline
 
 ```bash
@@ -9,14 +24,15 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 bash setup_macos.sh
 
 # Run on a directory of videos
-bash run_macos.sh -i data/ -o output/
+bash run_macos.sh -i ~/studies/my_study/data/videos/ -o ~/studies/my_study/output/
 
 # Run specific features only (faster)
-bash run_macos.sh -i data/ -f basic_audio,librosa_spectral,mediapipe_pose_vision,pyfeat_vision
+bash run_macos.sh -i ~/studies/my_study/data/videos/ -o ~/studies/my_study/output/ \
+  -f basic_audio,librosa_spectral,mediapipe_pose_vision,pyfeat_vision
 
 # Run directly after activating env
 conda activate pipeline-env
-python extract.py -i data/ -o output/
+python extract.py -i ~/studies/my_study/data/videos/ -o ~/studies/my_study/output/
 python extract.py --list-features
 python extract.py --check-dependencies
 ```
@@ -61,7 +77,7 @@ Note: `pyfeat_vision` now runs efficiently on CPU thanks to every-Nth-frame samp
 
 ## Output Directory Convention
 
-All output follows a neuroimaging-style directory structure:
+All output follows a neuroimaging-style directory structure. Folder names use `_from_` for directional prediction (DV_from_IV, matching APA convention) and `_by_` for non-directional grouping comparisons.
 
 ```
 output/
@@ -73,10 +89,31 @@ output/
       segments/         # HMM/segmentation (segment.py)
       map_states/       # state-outcome linking (map_states.py)
     sub{NNN}_sub{NNN}/
-      synchrony/        # dyad-level synchrony (synchronize.py)
+      synchrony/              # dyad-level synchrony (synchronize.py)
+        grouped/              # one subfolder per reduction method
+        pca/
+        cca/                  # + cca_loadings.csv
+        cluster/              # + cluster_assignments.csv
+      trust_from_synch/       # trustworthiness predicted from synchrony
+      synch_from_features/    # synchrony predicted from features
+      synch_by_states/        # synchrony compared by behavioral state
 ```
 
 All scripts must read from and write to this structure. Use `--output-dir` to point to the appropriate `output/dyad{NNN}/sub{NNN}/{verb}/` path. Never create flat top-level directories like `output/describe/`.
+
+### Synchrony output files
+
+`synchronize.py` produces these files in the synchrony output directory:
+
+| File | Format | Description |
+|---|---|---|
+| `synchrony_timeseries.csv` | Wide (one row per timepoint) | Columns: `time_seconds`, `{metric}_{dimension}` (e.g. `pearson_r_movement_energy`). Merges windowed pearson, crosscorr, concordance, and Granger results. Interpolated to `--output-resolution` grid (default: same as `--time-resolution`, 0.5s). Compatible with `correlate.py` as both `-f` and `-t` input. |
+| `windowed_synchrony_long.csv` | Long (window_time x dimension) | Original long-format windowed results. One row per (window, dimension) pair. |
+| `windowed_granger.csv` | Long (window_time x dimension) | Windowed Granger causality F-statistics and leader. |
+| `wavelet_timeseries.csv` | Wide (one row per timepoint) | Wavelet coherence and phase dynamics: `time_seconds`, `mean_phase_diff`, `mean_coherence`, `leader`. |
+| `synchrony_summary.csv` | One row per dimension | Overall summary statistics across all methods. |
+
+The `--output-resolution` flag controls interpolation of the wide-format file. Set to `0` to skip interpolation and output at window-step resolution. The interpolation uses `np.interp` (linear) between window centers.
 
 ## Architecture
 
