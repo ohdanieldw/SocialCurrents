@@ -28,6 +28,7 @@ from analysis.utils import (
     filter_timevarying_columns,
     compute_grouped_dimensions,
     run_reduction,
+    resolve_facing,
 )
 
 try:
@@ -65,6 +66,9 @@ def parse_args(argv=None):
     p.add_argument("--time-resolution", type=float, default=0.5,
                    help="Bin size in seconds (default: 0.5)")
     p.add_argument("--no-zscore", action="store_true", help="Skip z-scoring")
+    p.add_argument("--subjects", default=None,
+                   help="Path to subjects.csv for orientation normalization "
+                        "(columns: dyad, subject, seat_position, facing_direction)")
     p.add_argument("--overwrite", action="store_true", help="Overwrite existing output")
     return p.parse_args(argv)
 
@@ -309,7 +313,8 @@ def describe_subject(csv_path, out_dir, args):
     dyad_id = parts[0] if len(parts) > 1 else ""
     subject_id = parts[1] if len(parts) > 1 else stem
 
-    features_df = load_features(csv_path)
+    facing = resolve_facing(csv_path, getattr(args, "subjects", None))
+    features_df = load_features(csv_path, facing_direction=facing)
     n_frames = len(features_df)
     fps = n_frames / features_df["time_seconds"].max() if features_df["time_seconds"].max() > 0 else 25
     duration = features_df["time_seconds"].max()

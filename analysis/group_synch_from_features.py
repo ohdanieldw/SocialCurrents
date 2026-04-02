@@ -62,6 +62,9 @@ def parse_args(argv=None):
                    help="Path to CSV with subject-level individual difference scores")
     p.add_argument("-o", "--output-dir", default=None,
                    help="Output directory (default: {input-dir}/_batch/group_synch_from_features/)")
+    p.add_argument("--subjects", default=None,
+                   help="Path to subjects.csv (informational: notes whether "
+                        "orientation normalization was applied upstream)")
     p.add_argument("--overwrite", action="store_true",
                    help="Overwrite existing output files")
     return p.parse_args(argv)
@@ -607,6 +610,12 @@ def main():
     plot_overlap(synch_votes, overlap_df, input_dir, out_dir, label, slug)
 
     print_summary_report(synch_votes, overlap_df, out_dir, label, slug)
+
+    orientation_note = "applied (subjects.csv provided)" if args.subjects else "not applied"
+    print(f"  Orientation normalization: {orientation_note}")
+    with open(out_dir / "summary_report.txt", "a") as f:
+        f.write(f"\nOrientation normalization: {orientation_note}\n")
+
     print(f"\nDone. All outputs saved to {out_dir}")
 
 

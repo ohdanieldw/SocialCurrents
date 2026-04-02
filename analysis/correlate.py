@@ -37,6 +37,7 @@ from analysis.utils import (
     plot_single_crosscorr,
     plot_multi_heatmap,
     write_csv_with_header,
+    resolve_facing,
     GROUPED_DIMS,
 )
 
@@ -83,6 +84,9 @@ def parse_args(argv=None):
                         "(e.g. 'pearson_r_*,crosscorr_r_*') to select before reduction")
     p.add_argument("--no-zscore", action="store_true",
                    help="Skip z-scoring for grouped/every modes (PCA/FA/ICA always z-score internally)")
+    p.add_argument("--subjects", default=None,
+                   help="Path to subjects.csv for orientation normalization "
+                        "(columns: dyad, subject, seat_position, facing_direction)")
     p.add_argument("--overwrite", action="store_true",
                    help="Overwrite existing output files")
 
@@ -194,8 +198,10 @@ def run_single(args):
 
     prefix = f"{args.rater}_rates_{args.target_id}_" if args.rater and args.target_id else ""
 
+    facing = resolve_facing(args.features, args.subjects)
+
     print("Loading data...")
-    features_df = load_features(args.features)
+    features_df = load_features(args.features, facing_direction=facing)
     target_df = load_target(args.target, value_col=args.target_col)
 
     # Bin & align
@@ -374,8 +380,10 @@ def run_multi(args):
 
     prefix = f"{args.rater}_rates_{args.target_id}_" if args.rater and args.target_id else ""
 
+    facing = resolve_facing(args.features, args.subjects)
+
     print("Loading data...")
-    features_df = load_features(args.features)
+    features_df = load_features(args.features, facing_direction=facing)
     target_df = load_target(args.target)  # no value_col for multi-channel
 
     # Bin & align

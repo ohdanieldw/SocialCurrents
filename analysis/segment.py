@@ -31,6 +31,7 @@ from analysis.utils import (
     compute_grouped_dimensions,
     run_reduction,
     write_csv_with_header,
+    resolve_facing,
 )
 
 # Optional dependencies — graceful fallback
@@ -95,6 +96,9 @@ def parse_args(argv=None):
                    help="Skip z-scoring before analysis")
     p.add_argument("--seed", type=int, default=42,
                    help="Random seed (default: 42)")
+    p.add_argument("--subjects", default=None,
+                   help="Path to subjects.csv for orientation normalization "
+                        "(columns: dyad, subject, seat_position, facing_direction)")
     p.add_argument("--overwrite", action="store_true",
                    help="Overwrite existing output")
     return p.parse_args(argv)
@@ -700,8 +704,10 @@ def segment_subject(csv_path, out_dir, args):
     if args.method == "changepoint" and not HAS_RUPTURES:
         sys.exit("Error: ruptures not installed (pip install ruptures)")
 
+    facing = resolve_facing(csv_path, getattr(args, "subjects", None))
+
     print("Loading data...")
-    features_df = load_features(csv_path)
+    features_df = load_features(csv_path, facing_direction=facing)
 
     data, col_names, bin_times = prepare_features(features_df, args)
 

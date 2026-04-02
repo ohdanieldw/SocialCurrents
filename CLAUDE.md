@@ -119,6 +119,10 @@ output/
 
 All scripts must read from and write to this structure. Use `--output-dir` to point to the appropriate `output/dyad{NNN}/sub{NNN}/{verb}/` path. Never create flat top-level directories like `output/describe/`.
 
+### Orientation normalization
+
+Analysis scripts (`correlate.py`, `synchronize.py`, `describe.py`, `segment.py`) accept `--subjects path/to/subjects.csv` with columns: `dyad, subject, seat_position, facing_direction`. When provided, `load_features()` negates x-axis pose columns (`GMP_world_x_*`, `GMP_land_x_*`, `pf_facerectx`) for left-facing participants so all subjects share a canonical right-facing orientation. This is a load-time correction; raw CSVs are unchanged. Movement energy, audio, and facial AU features are direction-invariant and unaffected. The `resolve_facing()` utility in `analysis/utils.py` handles subject ID extraction and lookup. Group-level scripts accept `--subjects` as an informational flag and note it in their summary reports.
+
 ### Synchrony output files
 
 `synchronize.py` produces these files in the synchrony output directory:

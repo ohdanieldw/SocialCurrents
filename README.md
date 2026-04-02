@@ -575,6 +575,35 @@ Pick the tools that match your research question:
 | "Which features drive both synchrony AND ratings?" | `group_synch_from_features.py` |
 | "Full analysis" | Subject-level tools, then group-level scripts |
 
+### Orientation normalization
+
+In dyadic setups, one participant sits on the left (faces right) and the other sits on the right (faces left). This flips the meaning of x-axis pose coordinates: a leftward head turn for one person maps to the same x-value as a rightward head turn for the other. To correct this, all analysis scripts accept a `--subjects` flag pointing to a CSV that maps each participant to their facing direction:
+
+```
+~/studies/my_study/data/subjects.csv
+```
+
+| dyad | subject | seat_position | facing_direction |
+|---|---|---|---|
+| dyad001 | sub001 | left | right |
+| dyad001 | sub002 | right | left |
+| dyad002 | sub003 | left | right |
+| dyad002 | sub004 | right | left |
+
+When `--subjects` is provided, the analysis script looks up the subject ID from the features filename, and if they face left, negates all x-axis spatial columns (`GMP_world_x_*`, `GMP_land_x_*`, `pf_facerectx`) so that right-facing becomes the canonical orientation for all participants.
+
+```bash
+python analysis/correlate.py --mode single \
+  -f $OUT/dyad005/sub010/extract/dyad005_sub010_timeseries_features.csv \
+  -t $DATA/ratings/trustworthiness/sub009rating.csv \
+  --subjects $DATA/subjects.csv \
+  --label Trustworthiness -o $OUT/dyad005/sub010/correlate/
+```
+
+**What is NOT affected:** Movement energy (frame-to-frame displacement magnitude), all audio features, facial action units, and emotion probabilities are direction-invariant and unaffected by the flip. Only spatial x-coordinate columns change.
+
+**Load-time correction:** The raw `timeseries_features.csv` files are not modified. Normalization happens when the analysis script loads the data. Without `--subjects`, behavior is identical to running without normalization.
+
 ### Using the analysis tools standalone
 
 `correlate.py` and `synchronize.py` work with any timeseries CSV, not just SocialCurrents output. If you have your own behavioral coding, physiological recordings, or neural data in CSV format (columns = variables, rows = timepoints, with a time column), you can use these tools directly:
@@ -606,10 +635,12 @@ Generates a comprehensive descriptive summary of your extracted features before 
 # Single subject
 python analysis/describe.py \
   -f ~/studies/my_study/output/dyad005/sub010/extract/dyad005_sub010_timeseries_features.csv \
+  --subjects ~/studies/my_study/data/subjects.csv \
   -o ~/studies/my_study/output/dyad005/sub010/describe/
 
 # Batch: all subjects in a directory
-python analysis/describe.py -f ~/studies/my_study/output/ -o ~/studies/my_study/output/
+python analysis/describe.py -f ~/studies/my_study/output/ \
+  --subjects ~/studies/my_study/data/subjects.csv -o ~/studies/my_study/output/
 ```
 
 Accepts any timeseries CSV, not just SocialCurrents output.
@@ -623,6 +654,7 @@ Computes lagged cross-correlation between extracted behavioral features and exte
 python analysis/correlate.py --mode single \
   -f ~/studies/my_study/output/dyad005/sub010/extract/dyad005_sub010_timeseries_features.csv \
   -t ~/studies/my_study/data/ratings/trustworthiness/sub009rating.csv \
+  --subjects ~/studies/my_study/data/subjects.csv \
   --reduce-features pca --n-components 5 --label Trustworthiness \
   -o ~/studies/my_study/output/dyad005/sub010/correlate/
 
@@ -630,6 +662,7 @@ python analysis/correlate.py --mode single \
 python analysis/correlate.py --mode multi \
   -f ~/studies/my_study/output/dyad005/sub010/extract/dyad005_sub010_timeseries_features.csv \
   -t ~/studies/my_study/data/neural/dyad005_sub009_fnirs.csv \
+  --subjects ~/studies/my_study/data/subjects.csv \
   --reduce-features pca --reduce-target roi-average \
   --roi-config ~/studies/my_study/data/neural/roi_config.json \
   -o ~/studies/my_study/output/dyad005/sub009/correlate/
@@ -645,13 +678,15 @@ Segments a conversation into distinct behavioral states using Hidden Markov Mode
 # Single subject
 python analysis/segment.py \
   -f ~/studies/my_study/output/dyad005/sub010/extract/dyad005_sub010_timeseries_features.csv \
+  --subjects ~/studies/my_study/data/subjects.csv \
   --method hmm --n-states auto --max-states 8 \
   --state-selection elbow \
   --reduce-features pca --n-components 5 \
   -o ~/studies/my_study/output/dyad005/sub010/segments/
 
 # Batch: all subjects in a directory
-python analysis/segment.py -f ~/studies/my_study/output/ -o ~/studies/my_study/output/
+python analysis/segment.py -f ~/studies/my_study/output/ \
+  --subjects ~/studies/my_study/data/subjects.csv -o ~/studies/my_study/output/
 ```
 
 Works on any timeseries CSV: behavioral features, physiological recordings, or neural data.
@@ -673,6 +708,7 @@ All methods support lagged analysis and permutation-based surrogate testing for 
 python analysis/synchronize.py \
   --person-a ~/studies/my_study/output/dyad005/sub009/extract/dyad005_sub009_timeseries_features.csv \
   --person-b ~/studies/my_study/output/dyad005/sub010/extract/dyad005_sub010_timeseries_features.csv \
+  --subjects ~/studies/my_study/data/subjects.csv \
   --methods pearson,crosscorr,rqa,granger,coherence \
   --reduce-features grouped --window-size 30 \
   -o ~/studies/my_study/output/dyad005/sub009_sub010/synchrony/
@@ -776,6 +812,7 @@ Compute synchrony, then correlate the wide-format synchrony timeseries with dyna
 python analysis/synchronize.py \
   --person-a $OUT/dyad005/sub009/extract/dyad005_sub009_timeseries_features.csv \
   --person-b $OUT/dyad005/sub010/extract/dyad005_sub010_timeseries_features.csv \
+  --subjects $DATA/subjects.csv \
   --methods pearson,crosscorr,granger \
   --reduce-features grouped \
   -o $OUT/dyad005/sub009_sub010/synchrony/
@@ -796,6 +833,7 @@ Use synchrony_timeseries.csv as the target and extracted features as input. Pick
 python analysis/correlate.py --mode single \
   -f $OUT/dyad005/sub010/extract/dyad005_sub010_timeseries_features.csv \
   -t $OUT/dyad005/sub009_sub010/synchrony/synchrony_timeseries.csv \
+  --subjects $DATA/subjects.csv \
   --target-col pearson_r_movement_energy --label "Movement Synchrony" \
   --reduce-features pca --n-components 5 \
   -o $OUT/dyad005/sub009_sub010/synch_from_features/
@@ -808,6 +846,7 @@ Cross all feature dimensions against all synchrony columns simultaneously.
 python analysis/correlate.py --mode multi \
   -f $OUT/dyad005/sub010/extract/dyad005_sub010_timeseries_features.csv \
   -t $OUT/dyad005/sub009_sub010/synchrony/synchrony_timeseries.csv \
+  --subjects $DATA/subjects.csv \
   --reduce-features pca --reduce-target none \
   --label "Synchrony" \
   -o $OUT/dyad005/sub009_sub010/synch_from_features_multi/
@@ -831,6 +870,7 @@ Segment the conversation, then test whether synchrony is higher in some states t
 # Step 1: Segment
 python analysis/segment.py \
   -f $OUT/dyad005/sub010/extract/dyad005_sub010_timeseries_features.csv \
+  --subjects $DATA/subjects.csv \
   --method hmm --n-states auto \
   -o $OUT/dyad005/sub010/segments/
 
@@ -849,6 +889,7 @@ The core analysis for linking behavioral dynamics to social perception.
 # Step 1: Segment
 python analysis/segment.py \
   -f $OUT/dyad005/sub010/extract/dyad005_sub010_timeseries_features.csv \
+  --subjects $DATA/subjects.csv \
   --method hmm --n-states auto \
   -o $OUT/dyad005/sub010/segments/
 
@@ -868,6 +909,7 @@ Correlate extracted behavioral features with multi-channel fNIRS or EEG.
 python analysis/correlate.py --mode multi \
   -f $OUT/dyad005/sub010/extract/dyad005_sub010_timeseries_features.csv \
   -t $DATA/neural/dyad005_sub010_fnirs.csv \
+  --subjects $DATA/subjects.csv \
   --reduce-features pca --reduce-target roi-average \
   --roi-config $DATA/neural/roi_config.json \
   --label "fNIRS activation" \
@@ -888,23 +930,25 @@ bash run_macos.sh -i $DATA/videos/${DYAD}_${A}.MP4 -o $OUT --normalize-fps
 bash run_macos.sh -i $DATA/videos/${DYAD}_${B}.MP4 -o $OUT --normalize-fps
 
 # Describe
-python analysis/describe.py -f $OUT/$DYAD/$A/extract/${DYAD}_${A}_timeseries_features.csv -o $OUT/$DYAD/$A/describe/
-python analysis/describe.py -f $OUT/$DYAD/$B/extract/${DYAD}_${B}_timeseries_features.csv -o $OUT/$DYAD/$B/describe/
+python analysis/describe.py -f $OUT/$DYAD/$A/extract/${DYAD}_${A}_timeseries_features.csv --subjects $DATA/subjects.csv -o $OUT/$DYAD/$A/describe/
+python analysis/describe.py -f $OUT/$DYAD/$B/extract/${DYAD}_${B}_timeseries_features.csv --subjects $DATA/subjects.csv -o $OUT/$DYAD/$B/describe/
 
 # Segment
-python analysis/segment.py -f $OUT/$DYAD/$A/extract/${DYAD}_${A}_timeseries_features.csv --method hmm --n-states auto -o $OUT/$DYAD/$A/segments/
-python analysis/segment.py -f $OUT/$DYAD/$B/extract/${DYAD}_${B}_timeseries_features.csv --method hmm --n-states auto -o $OUT/$DYAD/$B/segments/
+python analysis/segment.py -f $OUT/$DYAD/$A/extract/${DYAD}_${A}_timeseries_features.csv --subjects $DATA/subjects.csv --method hmm --n-states auto -o $OUT/$DYAD/$A/segments/
+python analysis/segment.py -f $OUT/$DYAD/$B/extract/${DYAD}_${B}_timeseries_features.csv --subjects $DATA/subjects.csv --method hmm --n-states auto -o $OUT/$DYAD/$B/segments/
 
 # Synchrony
 python analysis/synchronize.py \
   --person-a $OUT/$DYAD/$A/extract/${DYAD}_${A}_timeseries_features.csv \
   --person-b $OUT/$DYAD/$B/extract/${DYAD}_${B}_timeseries_features.csv \
+  --subjects $DATA/subjects.csv \
   --methods all -o $OUT/$DYAD/${A}_${B}/synchrony/
 
 # Correlate features with ratings
 python analysis/correlate.py --mode single \
   -f $OUT/$DYAD/$B/extract/${DYAD}_${B}_timeseries_features.csv \
   -t $DATA/ratings/trustworthiness/${A}rating.csv \
+  --subjects $DATA/subjects.csv \
   --label Trustworthiness -o $OUT/$DYAD/$B/correlate/
 
 # Map states to ratings

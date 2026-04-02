@@ -30,6 +30,7 @@ from analysis.utils import (
     compute_grouped_dimensions,
     run_reduction,
     write_csv_with_header,
+    resolve_facing,
 )
 
 # Optional dependencies
@@ -95,6 +96,9 @@ def parse_args(argv=None):
                    help="Interpolated output resolution in seconds (default: same as --time-resolution). "
                         "Set to 0 to skip interpolation and output at window-step resolution.")
     p.add_argument("--no-zscore", action="store_true", help="Skip z-scoring")
+    p.add_argument("--subjects", default=None,
+                   help="Path to subjects.csv for orientation normalization "
+                        "(columns: dyad, subject, seat_position, facing_direction)")
     p.add_argument("--seed", type=int, default=42, help="Random seed (default: 42)")
     p.add_argument("--overwrite", action="store_true", help="Overwrite existing output")
     return p.parse_args(argv)
@@ -290,10 +294,13 @@ def preprocess_pair(args):
     *reduction_metadata* is a dict that may contain DataFrames such as
     ``cca_loadings`` or ``cluster_assignments`` for saving to disk.
     """
+    facing_a = resolve_facing(args.person_a, args.subjects)
+    facing_b = resolve_facing(args.person_b, args.subjects)
+
     print("Loading Person A...")
-    df_a = load_features(args.person_a)
+    df_a = load_features(args.person_a, facing_direction=facing_a)
     print("Loading Person B...")
-    df_b = load_features(args.person_b)
+    df_b = load_features(args.person_b, facing_direction=facing_b)
 
     print("\nBinning...")
     bin_a = bin_timeseries(df_a, "time_seconds", args.time_resolution)

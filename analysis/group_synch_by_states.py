@@ -57,6 +57,9 @@ def parse_args(argv=None):
                    help="Label for plot titles and report text (default: Synchrony)")
     p.add_argument("-o", "--output-dir", default=None,
                    help="Output directory (default: {input-dir}/_batch/group_synch_by_states/)")
+    p.add_argument("--subjects", default=None,
+                   help="Path to subjects.csv (informational: notes whether "
+                        "orientation normalization was applied upstream)")
     p.add_argument("--overwrite", action="store_true",
                    help="Overwrite existing output files")
     return p.parse_args(argv)
@@ -511,6 +514,12 @@ def main():
     plot_dyad_barplot(stacked, out_dir, label)
 
     print_summary_report(stacked, summary_df, out_dir, label)
+
+    orientation_note = "applied (subjects.csv provided)" if args.subjects else "not applied"
+    print(f"  Orientation normalization: {orientation_note}")
+    with open(out_dir / "summary_report.txt", "a") as f:
+        f.write(f"\nOrientation normalization: {orientation_note}\n")
+
     print(f"\nDone. All outputs saved to {out_dir}")
 
 

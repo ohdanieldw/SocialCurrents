@@ -57,11 +57,87 @@ def _detect_time_column(df):
              f"Accepted names: {', '.join(accepted)}")
 
 
-def load_features(path):
-    """Load pipeline timeseries features CSV."""
+_ORIENTATION_FLIP_PREFIXES = ("GMP_world_x_", "GMP_land_x_", "pf_facerectx")
+
+_SUBJECTS_CACHE = {}
+
+
+def normalize_orientation(df, facing_direction):
+    """Flip x-axis pose columns so all subjects face the canonical direction.
+
+    Right-facing is canonical (no change).  For left-facing participants,
+    x-axis columns are negated so spatial coordinates are comparable.
+    """
+    if facing_direction == "right":
+        print(f"  Normalized orientation: no change (facing right, canonical)")
+        return df
+    if facing_direction != "left":
+        print(f"  Warning: unknown facing_direction '{facing_direction}', skipping normalization")
+        return df
+
+    flip_cols = [c for c in df.columns
+                 if any(c.startswith(p) or c == p for p in _ORIENTATION_FLIP_PREFIXES)]
+    for c in flip_cols:
+        df[c] = -df[c]
+    print(f"  Normalized orientation: flipped {len(flip_cols)} x-axis columns (facing left)")
+    return df
+
+
+def load_subjects_csv(path):
+    """Load a subjects CSV and return {subject_id: facing_direction} dict."""
+    path = str(path)
+    if path in _SUBJECTS_CACHE:
+        return _SUBJECTS_CACHE[path]
+    df = pd.read_csv(path)
+    if "subject" not in df.columns or "facing_direction" not in df.columns:
+        sys.exit("Error: subjects CSV must contain 'subject' and 'facing_direction' columns")
+    mapping = dict(zip(df["subject"].astype(str), df["facing_direction"].astype(str)))
+    _SUBJECTS_CACHE[path] = mapping
+    return mapping
+
+
+def extract_subject_id(features_path):
+    """Extract subject ID from a features file path (dyadNNN_subNNN pattern)."""
+    import re
+    path_str = str(features_path)
+    m = re.search(r"(sub\d+)", Path(path_str).stem)
+    if m:
+        return m.group(1)
+    for part in Path(path_str).parts:
+        m = re.search(r"^(sub\d+)$", part)
+        if m:
+            return m.group(1)
+    return None
+
+
+def resolve_facing(features_path, subjects_path):
+    """Look up facing_direction for a features file from a subjects CSV."""
+    if subjects_path is None:
+        return None
+    mapping = load_subjects_csv(subjects_path)
+    sub_id = extract_subject_id(features_path)
+    if sub_id is None:
+        print(f"  Warning: could not extract subject ID from {features_path}")
+        return None
+    facing = mapping.get(sub_id)
+    if facing is None:
+        print(f"  Warning: subject {sub_id} not found in subjects CSV")
+        return None
+    print(f"  Subject {sub_id}: facing {facing}")
+    return facing
+
+
+def load_features(path, facing_direction=None):
+    """Load pipeline timeseries features CSV.
+
+    If *facing_direction* is provided, x-axis pose columns are flipped
+    so that all subjects face the canonical (right) direction.
+    """
     df = pd.read_csv(path)
     df = _detect_time_column(df)
     print(f"  Loaded features: {df.shape[0]} rows x {df.shape[1]} columns")
+    if facing_direction is not None:
+        df = normalize_orientation(df, facing_direction)
     return df
 
 
