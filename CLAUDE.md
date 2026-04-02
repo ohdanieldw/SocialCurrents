@@ -90,13 +90,31 @@ output/
       map_states/       # state-outcome linking (map_states.py)
     sub{NNN}_sub{NNN}/
       synchrony/              # dyad-level synchrony (synchronize.py)
-        grouped/              # one subfolder per reduction method
+        grouped/              # one subfolder per reduction method (7 methods)
         pca/
+        ica/
+        fa/
         cca/                  # + cca_loadings.csv
+        grouped-pca/
         cluster/              # + cluster_assignments.csv
-      trust_from_synch/       # trustworthiness predicted from synchrony
+      trust_from_synch/       # ratings predicted from synchrony
+        grouped/              # same 7 methods as synchrony/
+        pca/
+        ...
       synch_from_features/    # synchrony predicted from features
+        grouped/
+        pca/
+        ...
       synch_by_states/        # synchrony compared by behavioral state
+        grouped/
+        pca/
+        ...
+  _batch/                     # group-level results (cross-subject/dyad)
+    group_correlate/          # group_correlate.py
+    group_synchrony/          # group_synchrony.py
+    group_outcome_from_synch/ # group_outcome_from_synch.py
+    group_synch_from_features/ # group_synch_from_features.py
+    group_synch_by_states/    # group_synch_by_states.py
 ```
 
 All scripts must read from and write to this structure. Use `--output-dir` to point to the appropriate `output/dyad{NNN}/sub{NNN}/{verb}/` path. Never create flat top-level directories like `output/describe/`.
@@ -196,4 +214,10 @@ Many vision/audio analyzers call `ensure_repo(repo_key)` at init time (`cv_model
 | `packages/audio_models/audio_models/utils/audio_extraction.py` | ffmpeg wrapper: extracts mono 16 kHz WAV from video |
 | `packages/cv_models/cv_models/external/repo_manager.py` | On-demand git clone for upstream vision model repos |
 | `analysis/correlate.py` | Lagged cross-correlation between pipeline features and target signals (ratings, EEG, fNIRS) |
+| `analysis/synchronize.py` | 10 interpersonal synchrony methods with 7 reduction options |
 | `analysis/utils.py` | Shared analysis utilities: loading, binning, reduction, correlation, plotting |
+| `analysis/group_correlate.py` | Group-level: which features predict outcome ratings across subjects |
+| `analysis/group_synchrony.py` | Group-level: synchrony reliability, leader-follower, method comparison |
+| `analysis/group_outcome_from_synch.py` | Group-level: does synchrony predict outcome ratings (`--label`) |
+| `analysis/group_synch_from_features.py` | Group-level: which features drive synchrony, overlap with outcome |
+| `analysis/group_synch_by_states.py` | Group-level: do behavioral states differ in synchrony (eta-squared) |

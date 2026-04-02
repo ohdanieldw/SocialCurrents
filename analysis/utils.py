@@ -462,6 +462,79 @@ def plot_multi_heatmap(results_df, feat_dims, target_dims, output_path,
 
 
 # ---------------------------------------------------------------------------
+# Group-level helpers
+# ---------------------------------------------------------------------------
+
+def fisher_z(r):
+    """Fisher z-transform for correlation coefficients."""
+    return np.arctanh(np.clip(r, -0.9999, 0.9999))
+
+
+def inverse_fisher_z(z):
+    """Inverse Fisher z-transform back to r."""
+    return np.tanh(z)
+
+
+def discover_outputs(input_dir, pattern):
+    """Recursively find files matching *pattern* under *input_dir*."""
+    return sorted(Path(input_dir).rglob(pattern))
+
+
+def parse_csv_header(path):
+    """Parse ``# key: value`` comment header from a CSV file."""
+    meta = {}
+    with open(path) as f:
+        for line in f:
+            if line.startswith("#"):
+                key, _, val = line[2:].partition(":")
+                meta[key.strip()] = val.strip()
+            else:
+                break
+    return meta
+
+
+def extract_peak_correlation(corr_df, dimension_col="dimension"):
+    """Extract the peak absolute correlation per dimension."""
+    rows = []
+    for dim, sub in corr_df.groupby(dimension_col):
+        sub = sub.dropna(subset=["correlation"])
+        if sub.empty:
+            continue
+        idx = sub["correlation"].abs().idxmax()
+        row = sub.loc[idx]
+        rows.append({
+            "dimension": dim,
+            "peak_r": row["correlation"],
+            "peak_lag": row["lag_seconds"],
+            "peak_p": row["p_value"],
+            "peak_p_fdr": row.get("p_fdr", np.nan),
+        })
+    return pd.DataFrame(rows)
+
+
+MODALITY_MAP = {
+    "GMP_world_": "movement",
+    "GMP_norm_": "movement",
+    "oc_audvol": "vocal_energy",
+    "oc_audpit": "vocal_pitch",
+    "lbrs_": "spectral",
+    "osm_": "opensmile",
+    "pf_AU": "facial_AU",
+    "pf_emotion": "facial_emotion",
+    "pf_facepose": "head_pose",
+    "ee_": "emotieffnet",
+}
+
+
+def feature_to_modality(feature_name):
+    """Map a feature column name to its modality via prefix matching."""
+    for prefix, modality in MODALITY_MAP.items():
+        if feature_name.startswith(prefix):
+            return modality
+    return "other"
+
+
+# ---------------------------------------------------------------------------
 # CSV output
 # ---------------------------------------------------------------------------
 

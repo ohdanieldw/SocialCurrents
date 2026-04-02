@@ -283,18 +283,32 @@ Folder names use `_from_` for directional prediction (DV_from_IV, matching APA c
       segments/
       map_states/
     sub009_sub010/
-      synchrony/
-        grouped/            # --reduce-features grouped
+      synchrony/                  # dyad-level synchrony (synchronize.py)
+        grouped/                  # one subfolder per reduction method
         pca/
-        cca/                # + cca_loadings.csv
+        ica/
+        fa/
+        cca/                      # + cca_loadings.csv
         grouped-pca/
-        cluster/            # + cluster_assignments.csv
-      trust_from_synch/     # trustworthiness predicted from synchrony
+        cluster/                  # + cluster_assignments.csv
+      trust_from_synch/           # ratings predicted from synchrony
+        grouped/                  # same 7 methods as synchrony/
+        pca/
+        ...
+      synch_from_features/        # synchrony predicted from person B features
         grouped/
-      synch_from_features/  # synchrony predicted from person B features
+        pca/
+        ...
+      synch_by_states/            # synchrony compared by behavioral state
         grouped/
-      synch_by_states/      # synchrony compared by behavioral state
-        grouped/
+        pca/
+        ...
+  _batch/                         # group-level results (cross-subject/dyad)
+    group_correlate/              # group_correlate.py
+    group_synchrony/              # group_synchrony.py
+    group_outcome_from_synch/     # group_outcome_from_synch.py
+    group_synch_from_features/    # group_synch_from_features.py
+    group_synch_by_states/        # group_synch_by_states.py
 ```
 
 ## Feature extractors
@@ -537,7 +551,7 @@ If facial analysis fails on a particular frame (e.g., heavy occlusion, unusual l
 
 ## Analysis toolkit
 
-After extracting features with `extract.py`, SocialCurrents provides five analysis tools that produce publication-ready results. Each is a standalone script that can be used independently or combined.
+After extracting features with `extract.py`, SocialCurrents provides five subject/dyad-level analysis tools and five group-level scripts that aggregate results across participants. Each is a standalone script that can be used independently or combined.
 
 ### Workflow
 
@@ -555,7 +569,11 @@ Pick the tools that match your research question:
 | "Are partners behaviorally coordinated?" | `synchronize.py` |
 | "Do conversational states predict impression change?" | `segment.py` then `map_states.py` |
 | "Does interpersonal synchrony predict liking?" | `synchronize.py` then `correlate.py` |
-| "Full analysis" | `describe.py` then all four |
+| "Which features predict ratings across all subjects?" | `group_correlate.py` |
+| "Is synchrony reliable across dyads?" | `group_synchrony.py` |
+| "Does synchrony predict ratings at the group level?" | `group_outcome_from_synch.py` |
+| "Which features drive both synchrony AND ratings?" | `group_synch_from_features.py` |
+| "Full analysis" | Subject-level tools, then group-level scripts |
 
 ### Using the analysis tools standalone
 
@@ -679,6 +697,67 @@ python analysis/map_states.py \
 
 The signal can be anything: trait ratings, heart rate, synchrony values, neural activation. Any CSV with a time and value column.
 
+### Group-Level Analysis
+
+After running subject/dyad-level analyses, five group-level scripts aggregate results across participants and produce publication-ready statistics, plots, and summary reports. Each scans the output directory tree, discovers all relevant results, and runs group-level tests automatically. All accept `--label` to work with any rating dimension (trustworthiness, warmth, competence, etc.).
+
+#### `group_correlate.py`: Which Features Predict Ratings?
+
+Scans all `correlate/` results, stacks peak correlations across subjects, and runs one-sample t-tests (Fisher-z transformed). **Feature vote counting** traces PCA/ICA/FA loadings back to raw features to identify which specific behavioral cues consistently predict the outcome across subjects -- even when different subjects load on different components.
+
+```bash
+python analysis/group_correlate.py \
+  --input-dir ~/studies/my_study/output/ \
+  --reduce-method all --label Trustworthiness \
+  -o ~/studies/my_study/output/_batch/group_correlate/
+```
+
+#### `group_synchrony.py`: Is Synchrony Reliable Across Dyads?
+
+Tests whether synchrony metrics are reliably greater than zero (one-sample t-tests + Wilcoxon), checks leader-follower consistency (binomial tests), compares reduction methods (Friedman test), and summarizes RQA metrics.
+
+```bash
+python analysis/group_synchrony.py \
+  --input-dir ~/studies/my_study/output/ \
+  --reduce-method all \
+  -o ~/studies/my_study/output/_batch/group_synchrony/
+```
+
+#### `group_outcome_from_synch.py`: Does Synchrony Predict Ratings?
+
+Scans all `trust_from_synch/` results and tests whether synchrony-outcome correlations are reliably greater than zero across dyads. Analyzes lag direction (does synchrony change precede or follow rating change?) and compares which synchrony computation method best predicts the outcome. Use `--label` for any rating dimension.
+
+```bash
+python analysis/group_outcome_from_synch.py \
+  --input-dir ~/studies/my_study/output/ \
+  --reduce-method all --label Trustworthiness \
+  -o ~/studies/my_study/output/_batch/group_outcome_from_synch/
+```
+
+#### `group_synch_from_features.py`: Which Features Drive Synchrony?
+
+Applies the same vote counting approach to `synch_from_features/` results to find which behavioral features drive interpersonal synchrony. The key output is the **overlap analysis**: if `group_correlate.py` results exist, it cross-references to find features that predict BOTH the outcome rating AND synchrony -- the headline finding that "these behavioral cues both drive interpersonal coordination AND predict social impressions."
+
+```bash
+python analysis/group_synch_from_features.py \
+  --input-dir ~/studies/my_study/output/ \
+  --reduce-method all --label Trustworthiness \
+  -o ~/studies/my_study/output/_batch/group_synch_from_features/
+```
+
+#### `group_synch_by_states.py`: Do States Differ in Synchrony?
+
+Computes per-dyad effect sizes (eta-squared) from `synch_by_states/` results and tests whether behavioral states modulate synchrony reliably across dyads. Since states are not aligned across dyads (State 1 means different things), analysis focuses on within-dyad effect magnitudes.
+
+```bash
+python analysis/group_synch_by_states.py \
+  --input-dir ~/studies/my_study/output/ \
+  --reduce-method all \
+  -o ~/studies/my_study/output/_batch/group_synch_by_states/
+```
+
+All group scripts accept `--questionnaire` to run exploratory moderator analyses correlating peak effect sizes with individual difference scores.
+
 ### Combining tools
 
 The analysis tools accept any timeseries CSV as input, so you can chain them to answer multi-level questions. Below are common recipes. All examples use shell variables for readability:
@@ -795,7 +874,7 @@ python analysis/correlate.py --mode multi \
   -o $OUT/dyad005/sub010/fnirs_from_features/
 ```
 
-**Full pipeline: extraction → description → segmentation → synchrony → impression analysis**
+**Full pipeline: extraction → description → segmentation → synchrony → impression analysis → group**
 ```bash
 STUDY=~/studies/my_study
 OUT=$STUDY/output
@@ -834,11 +913,24 @@ python analysis/map_states.py \
   --signal $DATA/ratings/trustworthiness/${A}rating.csv \
   --signal-col Value --signal-label Trustworthiness \
   -o $OUT/$DYAD/$B/map_states/
+
+# ... repeat for all dyads, then run group-level analysis:
+
+# Group: which features predict trustworthiness across subjects?
+python analysis/group_correlate.py --input-dir $OUT --label Trustworthiness
+# Group: is synchrony reliable across dyads?
+python analysis/group_synchrony.py --input-dir $OUT
+# Group: does synchrony predict trustworthiness?
+python analysis/group_outcome_from_synch.py --input-dir $OUT --label Trustworthiness
+# Group: which features drive synchrony? (+ overlap with trust)
+python analysis/group_synch_from_features.py --input-dir $OUT --label Trustworthiness
+# Group: do states differ in synchrony?
+python analysis/group_synch_by_states.py --input-dir $OUT
 ```
 
 ### Why this toolkit
 
-Most multimodal pipelines stop at feature extraction. SocialCurrents goes further: from raw video to publication-ready analyses of how behavioral cues predict social perception, how conversation partners coordinate their behavior, and what latent states structure a social interaction. The analysis tools work with any timeseries data, not just SocialCurrents output. Researchers can use `correlate.py` with EEG, fNIRS, or any multi-channel neural recording, and `synchronize.py` with any pair of behavioral or physiological timeseries. The five tools compose freely: the output of any tool can be the input to any other, letting researchers answer multi-level questions (e.g., does synchrony during animated conversational states predict trustworthiness change?) without writing custom analysis code.
+Most multimodal pipelines stop at feature extraction. SocialCurrents goes further: from raw video to publication-ready analyses of how behavioral cues predict social perception, how conversation partners coordinate their behavior, and what latent states structure a social interaction. The analysis tools work with any timeseries data, not just SocialCurrents output. Researchers can use `correlate.py` with EEG, fNIRS, or any multi-channel neural recording, and `synchronize.py` with any pair of behavioral or physiological timeseries. The subject/dyad-level tools compose freely: the output of any tool can be the input to any other, letting researchers answer multi-level questions (e.g., does synchrony during animated conversational states predict trustworthiness change?) without writing custom analysis code. The group-level scripts then aggregate results across all participants to produce publication-ready statistics, identifying which behavioral features reliably predict outcomes and drive synchrony across the full sample.
 
 ## Optional & heavy features
 
