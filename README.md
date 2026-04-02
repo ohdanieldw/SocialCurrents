@@ -34,7 +34,7 @@ SocialCurrents is a multimodal feature extraction and analysis toolkit for socia
 
 The diagram below shows how SocialCurrents components relate to one another.
 
-![SocialCurrents pipeline overview](docs/socialcurrents_ecosystem_v4.svg)
+![SocialCurrents pipeline overview](docs/socialcurrents_ecosystem_v3.svg)
 
 ## Requirements
 
@@ -556,8 +556,6 @@ After extracting features with `extract.py`, SocialCurrents provides five subjec
 ### Workflow
 
 After extraction, the five analysis tools can be used in any order or combination. The diagram below shows how they connect; there is no required sequence.
-
-![Analysis workflow](docs/socialcurrents_ecosystem_v4.svg)
 
 Pick the tools that match your research question:
 
