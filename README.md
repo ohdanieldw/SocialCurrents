@@ -1071,7 +1071,7 @@ Early-stage development of SocialCurrents was supported by a seed fund grant fro
 
 If you use SocialCurrents in published research, please cite:
 
-> Oh, D. D. (2026). *SocialCurrents: A multimodal feature extraction pipeline for social and behavioral research* (Version 0.1.1) [Software]. GitHub. https://github.com/ohdanieldw/socialcurrents
+> Oh, D. D. (2026). *SocialCurrents: A multimodal feature extraction pipeline for social and behavioral research* (Version 0.2.0) [Software]. GitHub. https://github.com/ohdanieldw/socialcurrents
 
 ## Acknowledgments
 
