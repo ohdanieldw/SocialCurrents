@@ -32,4 +32,4 @@ fi
 
 # ── run pipeline ─────────────────────────────────────────────────────────────
 cd "$SCRIPT_DIR"
-conda run --no-capture-output -n "$ENV_NAME" python extract.py "$@"
+conda run --no-capture-output -n "$ENV_NAME" python analysis/extract.py "$@"

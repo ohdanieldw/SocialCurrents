@@ -174,7 +174,7 @@ The pipeline splits on the first underscore to extract the dyad and subject IDs.
 
 ## Command reference
 
-All the flags you can pass to `run_macos.sh` (or `python extract.py`), explained in plain English:
+All the flags you can pass to `run_macos.sh` (or `python analysis/extract.py`), explained in plain English:
 
 | Flag | What it does |
 |---|---|
@@ -551,7 +551,7 @@ If facial analysis fails on a particular frame (e.g., heavy occlusion, unusual l
 
 ## Analysis toolkit
 
-After extracting features with `extract.py`, SocialCurrents provides five subject/dyad-level analysis tools and five group-level scripts that aggregate results across participants. Each is a standalone script that can be used independently or combined.
+After extracting features with `analysis/extract.py`, SocialCurrents provides five subject/dyad-level analysis tools and five group-level scripts that aggregate results across participants. Each is a standalone script that can be used independently or combined.
 
 ### Workflow
 
