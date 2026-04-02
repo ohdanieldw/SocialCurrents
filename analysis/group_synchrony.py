@@ -54,13 +54,14 @@ def parse_args(argv=None):
                    help="Which feature reduction to analyze (default: all)")
     p.add_argument("--label", default="Synchrony",
                    help="Label for plot titles and report text (default: Synchrony)")
-    p.add_argument("--questionnaire", default=None,
-                   help="Path to CSV with subject-level individual difference scores")
     p.add_argument("-o", "--output-dir", default=None,
                    help="Output directory (default: {input-dir}/_batch/group_synchrony/)")
     p.add_argument("--subjects", default=None,
-                   help="Path to subjects.csv (informational: notes whether "
-                        "orientation normalization was applied upstream)")
+                   help="Path to subjects.csv with orientation, demographics, and "
+                        "questionnaire data (used for orientation note and moderator analysis)")
+    p.add_argument("--covariates", default=None,
+                   help="Comma-separated column names from subjects.csv for moderator analysis "
+                        "(e.g. ASQ_anxiety,IRI_EC). Requires --subjects.")
     p.add_argument("--overwrite", action="store_true",
                    help="Overwrite existing output files")
     return p.parse_args(argv)
@@ -696,25 +697,21 @@ def plot_cross_dyad_pearson(stacked, out_dir, label):
 # Individual differences (questionnaire)
 # ---------------------------------------------------------------------------
 
-def run_moderator_analysis(stacked, questionnaire_path, out_dir):
-    """Correlate dyad-level synchrony with questionnaire scores (Spearman)."""
+def run_moderator_analysis(stacked, subjects_path, scale_cols, out_dir):
+    """Correlate dyad-level synchrony with covariate scales (Spearman)."""
     print(f"\n{'='*60}")
     print("  Moderator analysis (individual differences)")
     print(f"{'='*60}")
     print("  NOTE: N is small; moderator analyses are exploratory.")
 
-    q_df = pd.read_csv(questionnaire_path)
-    if "subject" not in q_df.columns:
-        print("  Error: questionnaire CSV must contain a 'subject' column")
-        return
+    from analysis.utils import load_subjects_df
+    q_df = load_subjects_df(subjects_path)
 
-    numeric_cols = q_df.select_dtypes(include=[np.number]).columns.tolist()
-    scale_cols = [c for c in numeric_cols if c not in ("subject", "dyad")]
     if not scale_cols:
-        print("  No numeric scale columns found in questionnaire")
+        print("  No covariate columns specified")
         return
 
-    print(f"  Loaded questionnaire: {len(q_df)} subjects, {len(scale_cols)} scales")
+    print(f"  Covariates: {', '.join(scale_cols)}")
 
     mod_rows = []
     for (dim, method), sub in stacked.groupby(["dimension", "method"]):
@@ -952,12 +949,12 @@ def main():
     plot_method_comparison(per_dyad_method, out_dir, label)
     plot_cross_dyad_pearson(stacked_a, out_dir, label)
 
-    if args.questionnaire:
-        q_path = Path(args.questionnaire)
-        if not q_path.is_file():
-            print(f"  Warning: questionnaire file not found: {q_path}")
-        else:
-            run_moderator_analysis(stacked_a, q_path, out_dir)
+    if args.subjects and args.covariates:
+        from analysis.utils import load_subjects_df, get_covariate_columns
+        s_df = load_subjects_df(args.subjects)
+        cov_cols = get_covariate_columns(s_df, args.covariates)
+        if cov_cols:
+            run_moderator_analysis(stacked_a, args.subjects, cov_cols, out_dir)
 
     print_summary_report(stacked_a, out_dir, label)
 

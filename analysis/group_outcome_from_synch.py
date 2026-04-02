@@ -64,13 +64,14 @@ def parse_args(argv=None):
     p.add_argument("--label", default="Trustworthiness",
                    help="What the outcome measures, used in plot titles and filenames "
                         "(default: Trustworthiness)")
-    p.add_argument("--questionnaire", default=None,
-                   help="Path to CSV with subject-level individual difference scores")
     p.add_argument("-o", "--output-dir", default=None,
                    help="Output directory (default: {input-dir}/_batch/group_outcome_from_synch/)")
     p.add_argument("--subjects", default=None,
-                   help="Path to subjects.csv (informational: notes whether "
-                        "orientation normalization was applied upstream)")
+                   help="Path to subjects.csv with orientation, demographics, and "
+                        "questionnaire data (used for orientation note and moderator analysis)")
+    p.add_argument("--covariates", default=None,
+                   help="Comma-separated column names from subjects.csv for moderator analysis "
+                        "(e.g. ASQ_anxiety,IRI_EC). Requires --subjects.")
     p.add_argument("--overwrite", action="store_true",
                    help="Overwrite existing output files")
     return p.parse_args(argv)
@@ -519,25 +520,21 @@ def plot_lag_histogram(stacked, out_dir, label):
 # Moderator analysis
 # ---------------------------------------------------------------------------
 
-def run_moderator_analysis(stacked, questionnaire_path, out_dir, label):
-    """Correlate rater and target questionnaire scores with peak_r."""
+def run_moderator_analysis(stacked, subjects_path, scale_cols, out_dir, label):
+    """Correlate rater and target covariate scores with peak_r."""
     print(f"\n{'='*60}")
     print("  Moderator analysis (individual differences)")
     print(f"{'='*60}")
     print("  NOTE: N is small; moderator analyses are exploratory.")
 
-    q_df = pd.read_csv(questionnaire_path)
-    if "subject" not in q_df.columns:
-        print("  Error: questionnaire CSV must contain a 'subject' column")
-        return
+    from analysis.utils import load_subjects_df
+    q_df = load_subjects_df(subjects_path)
 
-    numeric_cols = q_df.select_dtypes(include=[np.number]).columns.tolist()
-    scale_cols = [c for c in numeric_cols if c not in ("subject", "dyad")]
     if not scale_cols:
-        print("  No numeric scale columns found in questionnaire")
+        print("  No covariate columns specified")
         return
 
-    print(f"  Loaded questionnaire: {len(q_df)} subjects, {len(scale_cols)} scales")
+    print(f"  Covariates: {', '.join(scale_cols)}")
 
     grouped_dims = stacked.groupby(["dimension", "method"]).filter(
         lambda x: len(x) >= 4
@@ -767,12 +764,12 @@ def main():
     plot_method_comparison(per_obs, out_dir, label)
     plot_lag_histogram(stacked, out_dir, label)
 
-    if args.questionnaire:
-        q_path = Path(args.questionnaire)
-        if not q_path.is_file():
-            print(f"  Warning: questionnaire file not found: {q_path}")
-        else:
-            run_moderator_analysis(stacked, q_path, out_dir, label)
+    if args.subjects and args.covariates:
+        from analysis.utils import load_subjects_df, get_covariate_columns
+        s_df = load_subjects_df(args.subjects)
+        cov_cols = get_covariate_columns(s_df, args.covariates)
+        if cov_cols:
+            run_moderator_analysis(stacked, args.subjects, cov_cols, out_dir, label)
 
     print_summary_report(stacked, summary_df, out_dir, label)
 

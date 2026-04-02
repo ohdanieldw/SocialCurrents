@@ -58,8 +58,11 @@ def parse_args(argv=None):
     p.add_argument("-o", "--output-dir", default=None,
                    help="Output directory (default: {input-dir}/_batch/group_synch_by_states/)")
     p.add_argument("--subjects", default=None,
-                   help="Path to subjects.csv (informational: notes whether "
-                        "orientation normalization was applied upstream)")
+                   help="Path to subjects.csv with orientation, demographics, and "
+                        "questionnaire data (used for orientation note)")
+    p.add_argument("--covariates", default=None,
+                   help="Comma-separated column names from subjects.csv for moderator analysis "
+                        "(e.g. ASQ_anxiety,IRI_EC). Requires --subjects.")
     p.add_argument("--overwrite", action="store_true",
                    help="Overwrite existing output files")
     return p.parse_args(argv)

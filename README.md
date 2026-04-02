@@ -1,8 +1,8 @@
 # SocialCurrents
 
-![Version](https://img.shields.io/badge/version-0.1.1-blue)
+![Version](https://img.shields.io/badge/version-0.2.0-blue)
 
-Extract 400+ behavioral features from video recordings and analyze social dynamics - interpersonal synchrony, conversational states, and impression formation - with no manual annotation required.
+Extract 400+ behavioral features from video recordings and analyze social dynamics - interpersonal synchrony, conversational states, and impression formation - with no manual annotation required. See [CHANGELOG.md](CHANGELOG.md) for a detailed history of features and changes.
 
 SocialCurrents is a multimodal feature extraction and analysis toolkit for social and behavioral research. Given video recordings of conversations, it extracts time-stamped behavioral features covering body movement, facial expression, speech, and language. Its analysis tools then relate these features to dynamic trait ratings, multi-channel neural recordings (fNIRS, EEG, fMRI), or any external timeseries, using lagged cross-correlation, HMM segmentation, and 10 interpersonal synchrony methods from the psychophysiology literature.
 
@@ -583,14 +583,23 @@ In dyadic setups, one participant sits on the left (faces right) and the other s
 ~/studies/my_study/data/subjects.csv
 ```
 
-| dyad | subject | seat_position | facing_direction |
-|---|---|---|---|
-| dyad001 | sub001 | left | right |
-| dyad001 | sub002 | right | left |
-| dyad002 | sub003 | left | right |
-| dyad002 | sub004 | right | left |
+| dyad | subject | seat_position | facing_direction | age | gender | ASQ_anxiety | IRI_EC | ... |
+|---|---|---|---|---|---|---|---|---|
+| dyad001 | sub001 | left | right | 22 | M | 3.21 | 4.00 | ... |
+| dyad001 | sub002 | right | left | 24 | F | 2.85 | 3.60 | ... |
+| dyad002 | sub003 | left | right | 21 | F | 3.10 | 3.80 | ... |
+| dyad002 | sub004 | right | left | 23 | M | 2.50 | 4.20 | ... |
+
+Only `subject` and `facing_direction` are required. Additional columns (demographics, questionnaire scales) are optional and used by group-level scripts when `--covariates` is specified.
 
 When `--subjects` is provided, the analysis script looks up the subject ID from the features filename, and if they face left, negates all x-axis spatial columns (`GMP_world_x_*`, `GMP_land_x_*`, `pf_facerectx`) so that right-facing becomes the canonical orientation for all participants.
+
+For group-level moderator analyses, add `--covariates` to specify which columns to use:
+```bash
+python analysis/group_correlate.py --input-dir $OUT \
+  --subjects $DATA/subjects.csv --covariates ASQ_anxiety,IRI_EC,IRI_PT \
+  --label Trustworthiness
+```
 
 ```bash
 python analysis/correlate.py --mode single \
@@ -792,7 +801,7 @@ python analysis/group_synch_by_states.py \
   -o ~/studies/my_study/output/_batch/group_synch_by_states/
 ```
 
-All group scripts accept `--questionnaire` to run exploratory moderator analyses correlating peak effect sizes with individual difference scores.
+All group scripts accept `--subjects` (with `--covariates`) to run exploratory moderator analyses correlating peak effect sizes with individual difference scores from the subjects CSV.
 
 ### Combining tools
 

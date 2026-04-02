@@ -83,17 +83,71 @@ def normalize_orientation(df, facing_direction):
     return df
 
 
-def load_subjects_csv(path):
-    """Load a subjects CSV and return {subject_id: facing_direction} dict."""
+def load_subjects_df(path):
+    """Load a subjects CSV and return the full DataFrame (cached).
+
+    The CSV must contain at least ``subject`` and ``facing_direction``
+    columns.  Additional columns (demographics, questionnaire scales)
+    are preserved and available for moderator analyses.
+    """
     path = str(path)
     if path in _SUBJECTS_CACHE:
         return _SUBJECTS_CACHE[path]
     df = pd.read_csv(path)
-    if "subject" not in df.columns or "facing_direction" not in df.columns:
-        sys.exit("Error: subjects CSV must contain 'subject' and 'facing_direction' columns")
-    mapping = dict(zip(df["subject"].astype(str), df["facing_direction"].astype(str)))
-    _SUBJECTS_CACHE[path] = mapping
-    return mapping
+    if "subject" not in df.columns:
+        sys.exit("Error: subjects CSV must contain a 'subject' column")
+    df["subject"] = df["subject"].astype(str)
+    _SUBJECTS_CACHE[path] = df
+    return df
+
+
+def load_subjects_csv(path):
+    """Load a subjects CSV and return {subject_id: facing_direction} dict.
+
+    Convenience wrapper around :func:`load_subjects_df` for backward
+    compatibility with code that only needs orientation info.
+    """
+    df = load_subjects_df(path)
+    if "facing_direction" not in df.columns:
+        sys.exit("Error: subjects CSV must contain a 'facing_direction' column")
+    return dict(zip(df["subject"], df["facing_direction"].astype(str)))
+
+
+def get_covariate_columns(subjects_df, covariates_arg):
+    """Return validated covariate column names from a subjects DataFrame.
+
+    Parameters
+    ----------
+    subjects_df : DataFrame
+        Full subjects DataFrame from :func:`load_subjects_df`.
+    covariates_arg : str or None
+        Comma-separated column names, or None to skip.
+
+    Returns
+    -------
+    list[str]
+        Validated, numeric covariate column names with <= 20% missing.
+    """
+    if covariates_arg is None:
+        return []
+    requested = [c.strip() for c in covariates_arg.split(",") if c.strip()]
+    missing = [c for c in requested if c not in subjects_df.columns]
+    if missing:
+        print(f"  Warning: covariate columns not found in subjects CSV: {missing}")
+    available = [c for c in requested if c in subjects_df.columns]
+    valid = []
+    for c in available:
+        if not np.issubdtype(subjects_df[c].dtype, np.number):
+            print(f"  Warning: skipping non-numeric covariate '{c}'")
+            continue
+        pct_missing = subjects_df[c].isna().mean()
+        if pct_missing > 0.20:
+            print(f"  Warning: skipping covariate '{c}' ({pct_missing:.0%} missing)")
+            continue
+        valid.append(c)
+    if valid:
+        print(f"  Covariates: {', '.join(valid)}")
+    return valid
 
 
 def extract_subject_id(features_path):
