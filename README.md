@@ -318,7 +318,7 @@ Folder names use `_from_` for directional prediction (DV_from_IV, matching APA c
 | `basic_audio` | Audio | `oc_` | McFee et al. (2015) |
 | `librosa_spectral` | Audio | `lbrs_` | McFee et al. (2015) |
 | `opensmile` | Audio | `osm_` | Eyben et al. (2010) |
-| `audiostretchy` | Audio | `AS_` | |
+| `audiostretchy` | Audio | `AS_` | Twardoch (2023) |
 | `speech_emotion` | Speech | `ser_` | Livingstone & Russo (2018) |
 | `whisperx_transcription` | Speech/ASR | `WhX_` | Bain et al. (2023); Radford et al. (2023) |
 | `xlsr_speech_to_text` | Speech/ASR | -- | Conneau et al. (2021) |
@@ -335,15 +335,15 @@ Folder names use `_from_` for directional prediction (DV_from_IV, matching APA c
 | `emotieffnet_vision` | Facial | `eln_` | Savchenko (2022) |
 | `dan_vision` | Facial | `dan_` | Wen et al. (2023) |
 | `ganimation_vision` | Facial | `GAN_` | Pumarola et al. (2020) |
-| `arbex_vision` | Facial | `arbex_` | |
-| `crowdflow_vision` | Video | `of_` | |
-| `instadm_vision` | Video | `indm_` | |
+| `arbex_vision` | Facial | `arbex_` | Wasi et al. (2023) |
+| `crowdflow_vision` | Video | `of_` | Senst et al. (2018) |
+| `instadm_vision` | Video | `indm_` | Lee et al. (2021) |
 | `optical_flow_vision` | Video | -- | Farneback (2003) |
 | `videofinder_vision` | Video | `ViF_` | |
 | `lanegcn_vision` | Video | `GCN_` | Liang et al. (2020) |
 | `openpose_vision` | Pose | `openPose_` | Cao et al. (2021) |
 | `pare_vision` | Pose | `PARE_` | Kocabas et al. (2021) |
-| `psa_vision` | Pose | `psa_` | |
+| `psa_vision` | Pose | `psa_` | Liu et al. (2021) |
 | `deep_hrnet_vision` | Pose | `DHiR_` | Sun et al. (2019) |
 | `simple_baselines_vision` | Pose | `SBH_` | Xiao et al. (2018) |
 | `rsn_vision` | Pose | `rsn_` | Cai et al. (2020) |
@@ -352,7 +352,7 @@ Folder names use `_from_` for directional prediction (DV_from_IV, matching APA c
 | `heinsen_sentiment` | NLP | `arvs_` | Heinsen (2022) |
 | `meld_emotion` | NLP | `MELD_` | Poria et al. (2019) |
 | `avhubert_vision` | Audio-Visual | -- | Ma et al. (2023) |
-| `fact_vision` | Video | -- | |
+| `fact_vision` | Video | -- | Lu & Elhamifar (2024) |
 | `video_frames_vision` | Video | -- | |
 | `rife_vision` | Video | -- | Huang et al. (2022) |
 
@@ -1115,9 +1115,15 @@ Kocabas, M., Huang, C.-H. P., Hilliges, O., & Black, M. J. (2021). PARE: Part at
 
 Lan, Z., Chen, M., Goodman, S., Gimpel, K., Sharma, P., & Soricut, R. (2020). ALBERT: A lite BERT for self-supervised learning of language representations. *Proceedings of ICLR*. https://doi.org/10.48550/arXiv.1909.11942
 
+Lee, S., Im, S., Lin, S., & Kweon, I. S. (2021). Learning monocular depth in dynamic scenes via instance-aware projection consistency. *Proceedings of the AAAI Conference on Artificial Intelligence*, *35*, 1863-1872. https://doi.org/10.1609/aaai.v35i2.16281
+
 Liang, M., Yang, B., Hu, R., Chen, Y., Liao, R., Feng, S., & Urtasun, R. (2020). Learning lane graph representations for motion forecasting. *Proceedings of ECCV*, 541-556. https://doi.org/10.1007/978-3-030-58536-5_32
 
+Liu, H., Liu, F., Fan, X., & Huang, D. (2021). Polarized self-attention: Towards high-quality pixel-wise regression. *arXiv:2107.00782*. https://doi.org/10.48550/arXiv.2107.00782
+
 Livingstone, S. R., & Russo, F. A. (2018). The Ryerson Audio-Visual Database of Emotional Speech and Song (RAVDESS). *PLoS ONE*, *13*(5), e0196391. https://doi.org/10.1371/journal.pone.0196391
+
+Lu, Z., & Elhamifar, E. (2024). FACT: Frame-action cross-attention temporal modeling for efficient action segmentation. *Proceedings of CVPR*, 18175-18185. https://doi.org/10.1109/CVPR52733.2024.01719
 
 Lugaresi, C., Tang, J., Nash, H., McClanahan, C., Uboweja, E., Hays, M., ... & Grundmann, M. (2019). MediaPipe: A framework for building perception pipelines. *arXiv:1906.08172*. https://doi.org/10.48550/arXiv.1906.08172
 
@@ -1145,9 +1151,13 @@ Savchenko, A. V. (2022). HSEmotion: High-speed emotion recognition library. *Pro
 
 Schreiber, T. (2000). Measuring information transfer. *Physical Review Letters*, *85*(2), 461-464. https://doi.org/10.1103/PhysRevLett.85.461
 
+Senst, T., Eiselein, V., Kuhn, A., & Sikora, T. (2018). Optical flow dataset and benchmark for visual crowd analysis. *Proceedings of WACV*, 1-9. https://doi.org/10.1109/WACV.2018.00058
+
 Sun, K., Xiao, B., Liu, D., & Wang, J. (2019). Deep high-resolution representation learning for human pose estimation. *Proceedings of CVPR*, 5693-5703. https://doi.org/10.1109/CVPR.2019.00584
 
 Wang, C., Wu, Y., Du, Y., Li, J., Liu, S., Lu, L., ... & Li, J. (2020). Semantic mask for Transformer based end-to-end speech recognition. *Proceedings of Interspeech*, 971-975. https://doi.org/10.21437/Interspeech.2020-2038
+
+Wasi, A. T., Sarker, S., Alam, F., Usman, M., Islam, S. I., & Islam, T. (2023). ARBEx: Attentive feature extraction with reliability balancing for robust facial expression learning. *arXiv:2305.01486*. https://doi.org/10.48550/arXiv.2305.01486
 
 Wen, Z., Lin, W., Wang, T., & Xu, G. (2023). Distract your attention: Multi-head cross attention network for facial expression recognition. *Biomimetics*, *8*(2), 199. https://doi.org/10.3390/biomimetics8020199
 
