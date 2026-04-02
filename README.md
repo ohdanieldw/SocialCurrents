@@ -313,48 +313,48 @@ Folder names use `_from_` for directional prediction (DV_from_IV, matching APA c
 
 ## Feature extractors
 
-| Name | Category | Output prefix |
-|---|---|---|
-| `basic_audio` | Audio | `oc_` |
-| `librosa_spectral` | Audio | `lbrs_` |
-| `opensmile` | Audio | `osm_` |
-| `audiostretchy` | Audio | `AS_` |
-| `speech_emotion` | Speech | `ser_` |
-| `whisperx_transcription` | Speech/ASR | `WhX_` |
-| `xlsr_speech_to_text` | Speech/ASR | -- |
-| `s2t_speech_to_text` | Speech/ASR | -- |
-| `deberta_text` | NLP | `DEB_` |
-| `simcse_text` | NLP | `CSE_` |
-| `albert_text` | NLP | `alb_` |
-| `sbert_text` | NLP | `BERT_` |
-| `use_text` | NLP | `USE_` |
-| `elmo_text` | NLP | -- |
-| `mediapipe_pose_vision` | Pose | `GMP_` |
-| `vitpose_vision` | Pose | `vit_` |
-| `pyfeat_vision` | Facial | `pf_` |
-| `emotieffnet_vision` | Facial | `eln_` |
-| `dan_vision` | Facial | `dan_` |
-| `ganimation_vision` | Facial | `GAN_` |
-| `arbex_vision` | Facial | `arbex_` |
-| `crowdflow_vision` | Video | `of_` |
-| `instadm_vision` | Video | `indm_` |
-| `optical_flow_vision` | Video | -- |
-| `videofinder_vision` | Video | `ViF_` |
-| `lanegcn_vision` | Video | `GCN_` |
-| `openpose_vision` | Pose | `openPose_` |
-| `pare_vision` | Pose | `PARE_` |
-| `psa_vision` | Pose | `psa_` |
-| `deep_hrnet_vision` | Pose | `DHiR_` |
-| `simple_baselines_vision` | Pose | `SBH_` |
-| `rsn_vision` | Pose | `rsn_` |
-| `smoothnet_vision` | Pose | `net_` |
-| `me_graphau_vision` | Facial | `ann_` |
-| `heinsen_sentiment` | NLP | `arvs_` |
-| `meld_emotion` | NLP | `MELD_` |
-| `avhubert_vision` | Audio-Visual | -- |
-| `fact_vision` | Video | -- |
-| `video_frames_vision` | Video | -- |
-| `rife_vision` | Video | -- |
+| Name | Category | Output prefix | Citation |
+|---|---|---|---|
+| `basic_audio` | Audio | `oc_` | McFee et al. (2015) |
+| `librosa_spectral` | Audio | `lbrs_` | McFee et al. (2015) |
+| `opensmile` | Audio | `osm_` | Eyben et al. (2010) |
+| `audiostretchy` | Audio | `AS_` | |
+| `speech_emotion` | Speech | `ser_` | Livingstone & Russo (2018) |
+| `whisperx_transcription` | Speech/ASR | `WhX_` | Bain et al. (2023); Radford et al. (2023) |
+| `xlsr_speech_to_text` | Speech/ASR | -- | Conneau et al. (2021) |
+| `s2t_speech_to_text` | Speech/ASR | -- | Wang et al. (2020) |
+| `deberta_text` | NLP | `DEB_` | He et al. (2021) |
+| `simcse_text` | NLP | `CSE_` | Gao et al. (2021) |
+| `albert_text` | NLP | `alb_` | Lan et al. (2020) |
+| `sbert_text` | NLP | `BERT_` | Reimers & Gurevych (2019) |
+| `use_text` | NLP | `USE_` | Cer et al. (2018) |
+| `elmo_text` | NLP | -- | Peters et al. (2018) |
+| `mediapipe_pose_vision` | Pose | `GMP_` | Lugaresi et al. (2019) |
+| `vitpose_vision` | Pose | `vit_` | Xu et al. (2022) |
+| `pyfeat_vision` | Facial | `pf_` | Cheong et al. (2023) |
+| `emotieffnet_vision` | Facial | `eln_` | Savchenko (2022) |
+| `dan_vision` | Facial | `dan_` | Wen et al. (2023) |
+| `ganimation_vision` | Facial | `GAN_` | Pumarola et al. (2020) |
+| `arbex_vision` | Facial | `arbex_` | |
+| `crowdflow_vision` | Video | `of_` | |
+| `instadm_vision` | Video | `indm_` | |
+| `optical_flow_vision` | Video | -- | Farneback (2003) |
+| `videofinder_vision` | Video | `ViF_` | |
+| `lanegcn_vision` | Video | `GCN_` | Liang et al. (2020) |
+| `openpose_vision` | Pose | `openPose_` | Cao et al. (2021) |
+| `pare_vision` | Pose | `PARE_` | Kocabas et al. (2021) |
+| `psa_vision` | Pose | `psa_` | |
+| `deep_hrnet_vision` | Pose | `DHiR_` | Sun et al. (2019) |
+| `simple_baselines_vision` | Pose | `SBH_` | Xiao et al. (2018) |
+| `rsn_vision` | Pose | `rsn_` | Cai et al. (2020) |
+| `smoothnet_vision` | Pose | `net_` | Zeng et al. (2022) |
+| `me_graphau_vision` | Facial | `ann_` | Luo et al. (2022) |
+| `heinsen_sentiment` | NLP | `arvs_` | Heinsen (2022) |
+| `meld_emotion` | NLP | `MELD_` | Poria et al. (2019) |
+| `avhubert_vision` | Audio-Visual | -- | Ma et al. (2023) |
+| `fact_vision` | Video | -- | |
+| `video_frames_vision` | Video | -- | |
+| `rife_vision` | Video | -- | Huang et al. (2022) |
 
 Run `bash run_macos.sh --list-features` for descriptions of each extractor.
 
@@ -1079,31 +1079,85 @@ If you use SocialCurrents in published research, please cite:
 
 ## References
 
+Bain, M., Huh, J., Han, T., & Zisserman, A. (2023). WhisperX: Time-accurate speech transcription of long-form audio. *Proceedings of Interspeech*, 4489-4493. https://doi.org/10.21437/Interspeech.2023-78
+
+Cai, Y., Wang, Z., Luo, Z., Yin, B., Du, A., Wang, H., ... & Sun, J. (2020). Learning delicate local representations for multi-person pose estimation. *Proceedings of ECCV*, 455-472. https://doi.org/10.1007/978-3-030-58580-8_27
+
+Cao, Z., Hidalgo, G., Simon, T., Wei, S.-E., & Sheikh, Y. (2021). OpenPose: Realtime multi-person 2D pose estimation using Part Affinity Fields. *IEEE Transactions on Pattern Analysis and Machine Intelligence*, *43*(1), 172-186. https://doi.org/10.1109/TPAMI.2019.2929257
+
+Cer, D., Yang, Y., Kong, S., Hua, N., Limtiaco, N., St. John, R., ... & Kurzweil, R. (2018). Universal Sentence Encoder. *arXiv:1803.11175*. https://doi.org/10.48550/arXiv.1803.11175
+
 Cheong, J. H., Xie, T., Byrne, S., & Chang, L. J. (2023). Py-Feat: Python Facial Expression Analysis Toolbox. *Affective Science*, *4*, 781-796. https://doi.org/10.1007/s42761-023-00191-4
 
 Coco, M. I., & Dale, R. (2014). Cross-recurrence quantification analysis of categorical and continuous time series: An R package. *Frontiers in Psychology*, *5*, 510. https://doi.org/10.3389/fpsyg.2014.00510
 
+Conneau, A., Baevski, A., Collobert, R., Mohamed, A., & Auli, M. (2021). Unsupervised cross-lingual representation learning for speech recognition. *IEEE/ACM Transactions on Audio, Speech, and Language Processing*, *29*, 2223-2235. https://doi.org/10.1109/TASLP.2021.3078580
+
 Eyben, F., Wollmer, M., & Schuller, B. (2010). openSMILE: The Munich versatile and fast open-source audio feature extractor. *Proceedings of ACM Multimedia*, 1459-1462. https://doi.org/10.1145/1873951.1874246
 
+Farneback, G. (2003). Two-frame motion estimation based on polynomial expansion. *Proceedings of the Scandinavian Conference on Image Analysis*, 363-370. https://doi.org/10.1007/3-540-45103-X_50
+
 Ferrer, E., & Helm, J. L. (2013). Dynamical systems modeling of physiological coregulation in dyadic interactions. *International Journal of Psychophysiology*, *88*(3), 296-308. https://doi.org/10.1016/j.ijpsycho.2012.10.013
+
+Gao, T., Yao, X., & Chen, D. (2021). SimCSE: Simple contrastive learning of sentence embeddings. *Proceedings of EMNLP*, 6894-6910. https://doi.org/10.18653/v1/2021.emnlp-main.552
 
 Granger, C. W. J. (1969). Investigating causal relations by econometric models and cross-spectral methods. *Econometrica*, *37*(3), 424-438. https://doi.org/10.2307/1912791
 
 Grinsted, A., Moore, J. C., & Jevrejeva, S. (2004). Application of the cross wavelet transform and wavelet coherence to geophysical time series. *Nonlinear Processes in Geophysics*, *11*(5/6), 561-566. https://doi.org/10.5194/npg-11-561-2004
 
+He, P., Liu, X., Gao, J., & Chen, W. (2021). DeBERTa: Decoding-enhanced BERT with disentangled attention. *Proceedings of ICLR*. https://doi.org/10.48550/arXiv.2006.03654
+
+Heinsen, F. (2022). An algorithm for routing vectors in sequences. *arXiv:2211.11754*. https://doi.org/10.48550/arXiv.2211.11754
+
+Huang, Z., Zhang, T., Heng, W., Shi, B., & Zhou, S. (2022). Real-time intermediate flow estimation for video frame interpolation. *Proceedings of ECCV*, 624-642. https://doi.org/10.1007/978-3-031-19781-9_36
+
+Kocabas, M., Huang, C.-H. P., Hilliges, O., & Black, M. J. (2021). PARE: Part attention regressor for 3D human body estimation. *Proceedings of ICCV*, 11127-11137. https://doi.org/10.1109/ICCV48922.2021.01094
+
+Lan, Z., Chen, M., Goodman, S., Gimpel, K., Sharma, P., & Soricut, R. (2020). ALBERT: A lite BERT for self-supervised learning of language representations. *Proceedings of ICLR*. https://doi.org/10.48550/arXiv.1909.11942
+
+Liang, M., Yang, B., Hu, R., Chen, Y., Liao, R., Feng, S., & Urtasun, R. (2020). Learning lane graph representations for motion forecasting. *Proceedings of ECCV*, 541-556. https://doi.org/10.1007/978-3-030-58536-5_32
+
+Livingstone, S. R., & Russo, F. A. (2018). The Ryerson Audio-Visual Database of Emotional Speech and Song (RAVDESS). *PLoS ONE*, *13*(5), e0196391. https://doi.org/10.1371/journal.pone.0196391
+
 Lugaresi, C., Tang, J., Nash, H., McClanahan, C., Uboweja, E., Hays, M., ... & Grundmann, M. (2019). MediaPipe: A framework for building perception pipelines. *arXiv:1906.08172*. https://doi.org/10.48550/arXiv.1906.08172
+
+Luo, C., Song, S., Xie, W., Shen, L., & Gunes, H. (2022). Learning multi-dimensional edge feature-based AU relation graph for facial action unit recognition. *Proceedings of IJCAI*, 1239-1246. https://doi.org/10.24963/ijcai.2022/173
+
+Ma, P., Haliassos, A., Fernandez-Lopez, A., Chen, H., Petridis, S., & Pantic, M. (2023). Auto-AVSR: Audio-visual speech recognition with automatic labels. *Proceedings of ICASSP*, 1-5. https://doi.org/10.1109/ICASSP49357.2023.10096889
 
 Mayo, O., & Gordon, I. (2020). In and out of synchrony: Behavioral and physiological dynamics of dyadic interpersonal coordination. *Psychophysiology*, *57*(6), e13574. https://doi.org/10.1111/psyp.13574
 
 McFee, B., Raffel, C., Liang, D., Ellis, D. P., McVicar, M., Battenberg, E., & Nieto, O. (2015). librosa: Audio and music signal analysis in Python. *Proceedings of the 14th Python in Science Conference*, 18-25. https://doi.org/10.25080/Majora-7b98e3ed-003
 
+Peters, M. E., Neumann, M., Iyyer, M., Gardner, M., Clark, C., Lee, K., & Zettlemoyer, L. (2018). Deep contextualized word representations. *Proceedings of NAACL-HLT*, 2227-2237. https://doi.org/10.18653/v1/N18-1202
+
+Poria, S., Hazarika, D., Majumder, N., Naik, G., Cambria, E., & Mihalcea, R. (2019). MELD: A multimodal multi-party dataset for emotion recognition in conversations. *Proceedings of ACL*, 527-536. https://doi.org/10.18653/v1/P19-1050
+
+Pumarola, A., Agudo, A., Martinez, A. M., Sanfeliu, A., & Moreno-Noguer, F. (2020). GANimation: One-shot anatomically consistent facial animation. *International Journal of Computer Vision*, *128*, 698-713. https://doi.org/10.1007/s11263-019-01210-3
+
 Rabiner, L. R. (1989). A tutorial on hidden Markov models and selected applications in speech recognition. *Proceedings of the IEEE*, *77*(2), 257-286. https://doi.org/10.1109/5.18626
 
 Radford, A., Kim, J. W., Xu, T., Brockman, G., McLeavey, C., & Sutskever, I. (2023). Robust speech recognition via large-scale weak supervision. *Proceedings of ICML*, 28492-28518. https://doi.org/10.48550/arXiv.2212.04356
 
+Reimers, N., & Gurevych, I. (2019). Sentence-BERT: Sentence embeddings using Siamese BERT-networks. *Proceedings of EMNLP-IJCNLP*, 3982-3992. https://doi.org/10.18653/v1/D19-1410
+
+Savchenko, A. V. (2022). HSEmotion: High-speed emotion recognition library. *Proceedings of the 1st International Workshop on Multimedia Signals*, 13-17. https://doi.org/10.1145/3552467.3554789
+
 Schreiber, T. (2000). Measuring information transfer. *Physical Review Letters*, *85*(2), 461-464. https://doi.org/10.1103/PhysRevLett.85.461
 
+Sun, K., Xiao, B., Liu, D., & Wang, J. (2019). Deep high-resolution representation learning for human pose estimation. *Proceedings of CVPR*, 5693-5703. https://doi.org/10.1109/CVPR.2019.00584
+
+Wang, C., Wu, Y., Du, Y., Li, J., Liu, S., Lu, L., ... & Li, J. (2020). Semantic mask for Transformer based end-to-end speech recognition. *Proceedings of Interspeech*, 971-975. https://doi.org/10.21437/Interspeech.2020-2038
+
+Wen, Z., Lin, W., Wang, T., & Xu, G. (2023). Distract your attention: Multi-head cross attention network for facial expression recognition. *Biomimetics*, *8*(2), 199. https://doi.org/10.3390/biomimetics8020199
+
+Xiao, B., Wu, H., & Wei, Y. (2018). Simple baselines for human pose estimation and tracking. *Proceedings of ECCV*, 466-481. https://doi.org/10.1007/978-3-030-01231-1_29
+
+Xu, Y., Zhang, J., Zhang, Q., & Tao, D. (2022). ViTPose: Simple vision transformer baselines for human pose estimation. *Advances in Neural Information Processing Systems*, *35*, 38571-38584.
+
 Zbilut, J. P., & Webber, C. L. (1992). Embeddings and delays as derived from quantification of recurrence plots. *Physics Letters A*, *171*(3-4), 199-203. https://doi.org/10.1016/0375-9601(92)90426-M
+
+Zeng, A., Yang, L., Ju, X., Li, J., Wang, J., & Xu, Q. (2022). SmoothNet: A plug-and-play network for refining human poses in videos. *Proceedings of ECCV*, 625-642. https://doi.org/10.1007/978-3-031-20065-6_36
 
 ## License
 
