@@ -56,7 +56,7 @@ def parse_args(argv=None):
     p.add_argument("--label", default="Synchrony",
                    help="Label for plot titles and report text (default: Synchrony)")
     p.add_argument("-o", "--output-dir", default=None,
-                   help="Output directory (default: {input-dir}/_batch/group_synch_by_states/)")
+                   help="Output directory (default: {input-dir}/group/group_synch_by_states/)")
     p.add_argument("--subjects", default=None,
                    help="Path to subjects.csv with orientation, demographics, and "
                         "questionnaire data (used for orientation note)")
@@ -105,7 +105,7 @@ def discover_summary_files(input_dir, reduce_method):
     for p in all_files:
         if "synch_by_states" not in str(p):
             continue
-        if "_batch" in str(p):
+        if "group" in str(p):
             continue
         dyad, sub_a, sub_b = _parse_dyad_from_path(p)
         method = _detect_method(p)
@@ -466,7 +466,7 @@ def main():
     if not input_dir.is_dir():
         sys.exit(f"Error: --input-dir does not exist: {input_dir}")
 
-    out_dir = Path(args.output_dir) if args.output_dir else input_dir / "_batch" / "group_synch_by_states"
+    out_dir = Path(args.output_dir) if args.output_dir else input_dir / "group" / "group_synch_by_states"
     out_dir.mkdir(parents=True, exist_ok=True)
 
     if not args.overwrite:

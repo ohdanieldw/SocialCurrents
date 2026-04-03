@@ -59,7 +59,7 @@ def parse_args(argv=None):
                    help="Outcome label for cross-reference with group_correlate results "
                         "(default: Trustworthiness)")
     p.add_argument("-o", "--output-dir", default=None,
-                   help="Output directory (default: {input-dir}/_batch/group_synch_from_features/)")
+                   help="Output directory (default: {input-dir}/group/group_synch_from_features/)")
     p.add_argument("--subjects", default=None,
                    help="Path to subjects.csv with orientation, demographics, and "
                         "questionnaire data (used for orientation note)")
@@ -115,7 +115,7 @@ def discover_synch_feat_files(input_dir, reduce_method):
     for p in all_csvs:
         if "synch_from_features" not in str(p):
             continue
-        if "_batch" in str(p):
+        if "group" in str(p):
             continue
         info = _parse_synch_feat_entry(p)
         if reduce_method != "all" and info["method"] != reduce_method:
@@ -137,7 +137,7 @@ def discover_loadings_files(input_dir, reduce_method):
     for p in all_csvs:
         if "synch_from_features" not in str(p):
             continue
-        if "_batch" in str(p) or "target_loadings" in p.name:
+        if "group" in str(p) or "target_loadings" in p.name:
             continue
         dyad = sub_a = sub_b = None
         for part in p.parts:
@@ -308,9 +308,9 @@ def run_overlap_analysis(synch_votes, input_dir, out_dir, label, slug):
     print(f"  Overlap analysis: features driving both {label} and synchrony")
     print(f"{'='*60}")
 
-    outcome_path = input_dir / "_batch" / "group_correlate" / f"group_{slug}_feature_votes.csv"
+    outcome_path = input_dir / "group" / "group_correlate" / f"group_{slug}_feature_votes.csv"
     if not outcome_path.exists():
-        alt_path = input_dir / "_batch" / "group_correlate" / "group_trustworthiness_feature_votes.csv"
+        alt_path = input_dir / "group" / "group_correlate" / "group_trustworthiness_feature_votes.csv"
         if alt_path.exists():
             outcome_path = alt_path
         else:
@@ -442,9 +442,9 @@ def plot_feature_votes(vote_summary, out_dir):
 
 def plot_overlap(synch_votes, overlap_df, input_dir, out_dir, label, slug):
     """Bar plot showing features by category: outcome-only, synch-only, both."""
-    outcome_path = input_dir / "_batch" / "group_correlate" / f"group_{slug}_feature_votes.csv"
+    outcome_path = input_dir / "group" / "group_correlate" / f"group_{slug}_feature_votes.csv"
     if not outcome_path.exists():
-        alt_path = input_dir / "_batch" / "group_correlate" / "group_trustworthiness_feature_votes.csv"
+        alt_path = input_dir / "group" / "group_correlate" / "group_trustworthiness_feature_votes.csv"
         if alt_path.exists():
             outcome_path = alt_path
         else:
@@ -576,7 +576,7 @@ def main():
     if not input_dir.is_dir():
         sys.exit(f"Error: --input-dir does not exist: {input_dir}")
 
-    out_dir = Path(args.output_dir) if args.output_dir else input_dir / "_batch" / "group_synch_from_features"
+    out_dir = Path(args.output_dir) if args.output_dir else input_dir / "group" / "group_synch_from_features"
     out_dir.mkdir(parents=True, exist_ok=True)
 
     if not args.overwrite:

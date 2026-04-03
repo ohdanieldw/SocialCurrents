@@ -77,7 +77,7 @@ Five scripts that aggregate subject/dyad-level results into publication-ready gr
   - `normalize_orientation()` / `resolve_facing()` / `load_subjects_df()`: orientation support
   - `get_covariate_columns()`: validate and filter covariate columns
 - Folder naming convention: `_from_` for directional prediction (DV_from_IV, APA style), `_by_` for grouping comparisons
-- `_batch/` directory for cross-subject/dyad group-level results
+- `group/` directory for cross-subject/dyad group-level results
 - `write_csv_with_header()` used throughout for reproducible metadata in all output CSVs
 - Reference benchmarks (Hirschberg et al., Bernieri & Rosenthal, Dale & Spivey, Cohen) printed in terminal and saved to `summary_report.txt`
 

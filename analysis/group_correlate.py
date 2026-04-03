@@ -67,7 +67,7 @@ def parse_args(argv=None):
                    help="What the outcome measures, used in plot titles and filenames "
                         "(default: Trustworthiness)")
     p.add_argument("-o", "--output-dir", default=None,
-                   help="Output directory (default: {input-dir}/_batch/group_correlate/)")
+                   help="Output directory (default: {input-dir}/group/group_correlate/)")
     p.add_argument("--subjects", default=None,
                    help="Path to subjects.csv with orientation, demographics, and "
                         "questionnaire data (used for orientation note and moderator analysis)")
@@ -125,7 +125,7 @@ def discover_correlation_files(input_dir, reduce_method):
     all_csvs = discover_outputs(input_dir, "*correlation*.csv")
     corr_files = []
     for p in all_csvs:
-        if "group_" in p.name or "_batch" in str(p):
+        if "group_" in p.name or "group" in str(p):
             continue
         if not _CORR_FILENAME_RE.match(p.name):
             continue
@@ -150,7 +150,7 @@ def discover_loadings_files(input_dir):
         r"^(?P<rater>sub\d+)_rates_(?P<target>sub\d+)_loadings_(?P<method>pca|fa|ica)\.csv$"
     )
     for p in all_csvs:
-        if "_batch" in str(p):
+        if "group" in str(p):
             continue
         match = pat.match(p.name)
         if match:
@@ -759,7 +759,7 @@ def main():
     if not input_dir.is_dir():
         sys.exit(f"Error: --input-dir does not exist: {input_dir}")
 
-    out_dir = Path(args.output_dir) if args.output_dir else input_dir / "_batch" / "group_correlate"
+    out_dir = Path(args.output_dir) if args.output_dir else input_dir / "group" / "group_correlate"
     out_dir.mkdir(parents=True, exist_ok=True)
 
     if not args.overwrite:

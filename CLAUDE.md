@@ -109,7 +109,7 @@ output/
         grouped/
         pca/
         ...
-  _batch/                     # group-level results (cross-subject/dyad)
+  group/                     # group-level results (cross-subject/dyad)
     group_correlate/          # group_correlate.py
     group_synchrony/          # group_synchrony.py
     group_outcome_from_synch/ # group_outcome_from_synch.py

@@ -303,7 +303,7 @@ Folder names use `_from_` for directional prediction (DV_from_IV, matching APA c
         grouped/
         pca/
         ...
-  _batch/                         # group-level results (cross-subject/dyad)
+  group/                         # group-level results (cross-subject/dyad)
     group_correlate/              # group_correlate.py
     group_synchrony/              # group_synchrony.py
     group_outcome_from_synch/     # group_outcome_from_synch.py
@@ -752,7 +752,7 @@ Scans all `correlate/` results, stacks peak correlations across subjects, and ru
 python analysis/group_correlate.py \
   --input-dir ~/studies/my_study/output/ \
   --reduce-method all --label Trustworthiness \
-  -o ~/studies/my_study/output/_batch/group_correlate/
+  -o ~/studies/my_study/output/group/group_correlate/
 ```
 
 #### `group_synchrony.py`: Is Synchrony Reliable Across Dyads?
@@ -763,7 +763,7 @@ Tests whether synchrony metrics are reliably greater than zero (one-sample t-tes
 python analysis/group_synchrony.py \
   --input-dir ~/studies/my_study/output/ \
   --reduce-method all \
-  -o ~/studies/my_study/output/_batch/group_synchrony/
+  -o ~/studies/my_study/output/group/group_synchrony/
 ```
 
 #### `group_outcome_from_synch.py`: Does Synchrony Predict Ratings?
@@ -774,7 +774,7 @@ Scans all `trust_from_synch/` results and tests whether synchrony-outcome correl
 python analysis/group_outcome_from_synch.py \
   --input-dir ~/studies/my_study/output/ \
   --reduce-method all --label Trustworthiness \
-  -o ~/studies/my_study/output/_batch/group_outcome_from_synch/
+  -o ~/studies/my_study/output/group/group_outcome_from_synch/
 ```
 
 #### `group_synch_from_features.py`: Which Features Drive Synchrony?
@@ -785,7 +785,7 @@ Applies the same vote counting approach to `synch_from_features/` results to fin
 python analysis/group_synch_from_features.py \
   --input-dir ~/studies/my_study/output/ \
   --reduce-method all --label Trustworthiness \
-  -o ~/studies/my_study/output/_batch/group_synch_from_features/
+  -o ~/studies/my_study/output/group/group_synch_from_features/
 ```
 
 #### `group_synch_by_states.py`: Do States Differ in Synchrony?
@@ -796,7 +796,7 @@ Computes per-dyad effect sizes (eta-squared) from `synch_by_states/` results and
 python analysis/group_synch_by_states.py \
   --input-dir ~/studies/my_study/output/ \
   --reduce-method all \
-  -o ~/studies/my_study/output/_batch/group_synch_by_states/
+  -o ~/studies/my_study/output/group/group_synch_by_states/
 ```
 
 All group scripts accept `--subjects` (with `--covariates`) to run exploratory moderator analyses correlating peak effect sizes with individual difference scores from the subjects CSV.

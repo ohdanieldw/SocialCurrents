@@ -65,7 +65,7 @@ def parse_args(argv=None):
                    help="What the outcome measures, used in plot titles and filenames "
                         "(default: Trustworthiness)")
     p.add_argument("-o", "--output-dir", default=None,
-                   help="Output directory (default: {input-dir}/_batch/group_outcome_from_synch/)")
+                   help="Output directory (default: {input-dir}/group/group_outcome_from_synch/)")
     p.add_argument("--subjects", default=None,
                    help="Path to subjects.csv with orientation, demographics, and "
                         "questionnaire data (used for orientation note and moderator analysis)")
@@ -146,7 +146,7 @@ def discover_trust_synch_files(input_dir, reduce_method):
     for p in all_csvs:
         if "trust_from_synch" not in str(p):
             continue
-        if "_batch" in str(p):
+        if "group" in str(p):
             continue
         info = _parse_trust_synch_entry(p)
         if reduce_method != "all" and info["method"] != reduce_method:
@@ -718,7 +718,7 @@ def main():
     if not input_dir.is_dir():
         sys.exit(f"Error: --input-dir does not exist: {input_dir}")
 
-    out_dir = Path(args.output_dir) if args.output_dir else input_dir / "_batch" / "group_outcome_from_synch"
+    out_dir = Path(args.output_dir) if args.output_dir else input_dir / "group" / "group_outcome_from_synch"
     out_dir.mkdir(parents=True, exist_ok=True)
 
     if not args.overwrite:

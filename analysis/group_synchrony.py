@@ -55,7 +55,7 @@ def parse_args(argv=None):
     p.add_argument("--label", default="Synchrony",
                    help="Label for plot titles and report text (default: Synchrony)")
     p.add_argument("-o", "--output-dir", default=None,
-                   help="Output directory (default: {input-dir}/_batch/group_synchrony/)")
+                   help="Output directory (default: {input-dir}/group/group_synchrony/)")
     p.add_argument("--subjects", default=None,
                    help="Path to subjects.csv with orientation, demographics, and "
                         "questionnaire data (used for orientation note and moderator analysis)")
@@ -106,7 +106,7 @@ def discover_synchrony_files(input_dir, reduce_method):
     all_summaries = discover_outputs(input_dir, "synchrony_summary.csv")
     results = []
     for p in all_summaries:
-        if "_batch" in str(p):
+        if "group" in str(p):
             continue
         dyad, sub_a, sub_b = _parse_dyad_from_path(p)
         method = _detect_method_from_path(p)
@@ -134,7 +134,7 @@ def discover_leader_files(input_dir, reduce_method):
     all_leaders = discover_outputs(input_dir, "leader_follower.csv")
     results = []
     for p in all_leaders:
-        if "_batch" in str(p):
+        if "group" in str(p):
             continue
         dyad, sub_a, sub_b = _parse_dyad_from_path(p)
         method = _detect_method_from_path(p)
@@ -915,7 +915,7 @@ def main():
     if not input_dir.is_dir():
         sys.exit(f"Error: --input-dir does not exist: {input_dir}")
 
-    out_dir = Path(args.output_dir) if args.output_dir else input_dir / "_batch" / "group_synchrony"
+    out_dir = Path(args.output_dir) if args.output_dir else input_dir / "group" / "group_synchrony"
     out_dir.mkdir(parents=True, exist_ok=True)
 
     if not args.overwrite:
